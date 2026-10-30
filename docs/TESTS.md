@@ -77,4 +77,4 @@ Auf dem Testserver (nur `PeakCore-0.1.0.jar`, Alpha-Testdaten):
 - [x] `modules.peaksound.enabled: false`: Modul startet nicht, Core laeuft, `/peakcore modules` nennt den Grund
 - [x] Altes `PeakSound`-Jar zusaetzlich in `plugins/`: Fehlermeldung im Log, eingebautes Modul startet nicht, nichts stuerzt ab
 - [ ] Alte (Alpha-)Mod gegen das All-in-One-Jar: nicht erneut durchgespielt (Kanal und Code unveraendert, in Phase 6 geprueft)
-- [ ] Beobachtung: Die neue Mod meldete im Auto-Debug 3 ungueltige `PlaybackStart`-Pakete (Wert ausserhalb des Bereichs) beim Wiederherstellen laufender Jukeboxen aus den Testdaten. Die Wiedergabe-Klassen sind nur mechanisch geaendert; Ursache noch nicht geklaert
+- [x] Beobachtung geklaert: Die 3 ungueltigen `PlaybackStart`-Pakete aus dem ersten Lauf traten beim zweiten Lauf nicht mehr auf (0 ungueltig, Auto-Debug mit vollem Hex-Dump). Die Settings der Testdaten sind gueltig (Reichweite 16, Lautstaerke <= 100); die genaue Ursache blieb ungeklaert, vermutlich ein Zeitzustand direkt nach dem Neustart. Der Debug-Bericht zeigt Ungueltige Pakete jetzt komplett (128 Bytes).
