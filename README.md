@@ -1,8 +1,8 @@
 # PeakCore
 
-Basis-Plugin fuer die PeakVerse-Module (PeakSound, TexturePeak, ...). Module haengen von PeakCore ab (`depend: [PeakCore]`) und laden ohne PeakCore nicht.
+Basis fuer die PeakVerse-Module (PeakSound, TexturePeak, ...). Auf dem Server liegt **ein einziges Jar**, `PeakCore-<Version>.jar`: Es enthaelt den Core und alle eingebauten Module; jedes Modul laesst sich in der `config.yml` ausschalten. Das Jar setzt das Projekt `../Bundle` zusammen. Module von Dritten koennen weiter als eigene Plugins mit `depend: [PeakCore]` kommen.
 
-**Stand: Phase 5** - oeffentliche API, Modul-Anmeldung mit Versionspruefung, Kanal `peakcore:main` mit Umschlag (Modul-ID + Nutzdaten), Handshake mit der Mod (Version, Admin-Status, Modulliste), Admin-Pruefung, `/peakcore`, Core-Mod fuer den Client. Der Resource-Pack-Dienst folgt in den naechsten Phasen (siehe `../docs/PLAN.md`). Paketformat: `docs/PROTOCOL.md`.
+**Stand: Phase 6b** - oeffentliche API, Modul-Anmeldung mit Versionspruefung, Kanal `peakcore:main` mit Umschlag (Modul-ID + Nutzdaten), Handshake mit der Mod (Version, Admin-Status, Modulliste), Admin-Pruefung, `/peakcore`, Core-Mod fuer den Client. Der Resource-Pack-Dienst folgt in den naechsten Phasen (siehe `../docs/PLAN.md`). Paketformat: `docs/PROTOCOL.md`.
 
 ## Aufbau
 
@@ -12,8 +12,16 @@ Basis-Plugin fuer die PeakVerse-Module (PeakSound, TexturePeak, ...). Module hae
 | `core-api` | Oeffentliche Schnittstelle fuer Module (`PeakCoreApi`, `ModuleInfo`, `ModuleRegistration`, `ModuleMessageHandler`) |
 | `core-client` | Zustandsmaschine der Mod (Handshake, Wiederholung, Modul-Routing), reine Java-Bibliothek ohne Minecraft |
 | `core-mod` | Fabric-Mod `PeakCore-<Version>.jar` fuer den Client; haengt die Sitzung an das Fabric-Netzwerk |
-| `core-plugin` | Das Plugin (`PeakCore-<Version>.jar`); enthaelt API und Protokoll gleich mit |
+| `core-plugin` | Der Plugin-Teil des Cores (Handshake, Kanal, Modul-Lader); das fertige Jar baut `../Bundle` daraus und aus den Modulen |
 | `examples/probe-module` | Beispiel- und Testmodul (nicht Teil des Cores) |
+
+## Eingebaute Module (Phase 6b)
+
+Ein eingebautes Modul implementiert `PeakModule` (`id`, `displayName`, `enable(ModuleContext)`, `disable`) und steht in `META-INF/services/de.peakverse.core.api.module.PeakModule`. Der Core findet es per ServiceLoader und startet es nach seinem eigenen Start; Fehler eines Moduls stoppen weder den Core noch andere Module.
+
+Der `ModuleContext` liefert Datenordner (`plugins/<Anzeigename>`, bei PeakSound also unveraendert `plugins/PeakSound`), eigene `config.yml` (Standard aus `modules/<id>/config.yml` im Jar), Logger und das Bukkit-Plugin PeakCore fuer Scheduler und Events.
+
+Grenze: Ein Modul laesst sich nur beim Serverstart ein- oder ausschalten. Scheitert `enable` mittendrin, bleiben schon registrierte Listener und Timer bis zum Neustart bestehen.
 
 ## Benutzung durch ein Modul
 
@@ -46,6 +54,9 @@ Recht: `peakcore.admin` (Standard: Operatoren).
 |---|---|---|
 | `non-mod-hint.enabled` | `true` | Chat-Hinweis fuer Spieler ohne Mod (sie werden nie gekickt) |
 | `non-mod-hint.delay-ticks` | `100` | so lange wartet der Server auf die Mod, bevor er den Hinweis zeigt |
+| `modules.<id>.enabled` | `true` | eingebautes Modul starten (`peaksound`); nach einer Aenderung neu starten |
+
+Ist neben PeakCore noch ein altes eigenstaendiges Plugin mit dem Namen eines eingebauten Moduls installiert (`PeakSound.jar`), startet PeakCore das eingebaute Modul nicht und meldet es im Log und in `/peakcore modules`; die alte Jar muss weg.
 
 Ereignis fuer Module: `PlayerHandshakeEvent` (Haupt-Thread) nach erfolgreichem Handshake.
 
@@ -62,10 +73,12 @@ Oder alle Module gemeinsam: `../tools/build-all.ps1 -Install`.
 Andere Mods melden ihr Modul in der gemeinsamen Sitzung an, am besten in ihrem Client-Einstieg:
 
 ```java
-ClientSession session = PeakCoreClient.session();
-ClientSession.ModuleChannel channel = session.registerModule("peaksound", "0.1.0", payload -> { /* Daten vom Server */ });
-if (channel.send(bytes)) { ... }   // false, solange der Handshake nicht geschafft ist
-session.isActive(); session.isAdmin(); session.serverHasModule("peaksound"); session.serverNow();
+// Fabric startet die Mods nicht in garantierter Reihenfolge: whenReady holt die Anmeldung nach, falls die Core-Mod noch nicht dran war
+PeakCoreSession.whenReady(session -> {
+    ClientSession.ModuleChannel channel = session.registerModule("peaksound", "0.1.0", payload -> { /* Daten vom Server */ });
+    // spaeter: if (channel.send(bytes)) { ... }   // false, solange der Handshake nicht geschafft ist
+});
+// nach dem Start: PeakCoreSession.get() -> session.isActive(); session.isAdmin(); session.serverHasModule("peaksound"); session.serverNow();
 ```
 
 Beim Beitritt schickt die Mod `Hello` (mit allen angemeldeten Modulen), sobald der Server den Kanal meldet, und wiederholt es alle 2 Sekunden bis zu 10-mal. Kennt der Server den Kanal nach 10 Sekunden nicht (kein PeakCore), bleibt die Mod still. Client-Befehl `/peakcorestatus` zeigt den Zustand.

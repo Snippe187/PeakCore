@@ -15,3 +15,5 @@
 - Chat-Hinweis fuer Spieler ohne Mod (`config.yml`), `/peakcore players`
 - Core-Mod fuer den Client (Fabric): Handshake, Modul-Routing (`PeakCoreClient.session()`), Admin-Status, `/peakcorestatus`
 - `core-client`: testbare Zustandsmaschine der Mod
+- All-in-One-Jar: eingebaute Module (`PeakModule` per ServiceLoader, `ModuleContext` mit eigenem Datenordner, Config und Logger), Schalter `modules.<id>.enabled`, Warnung bei altem Einzel-Plugin, `/peakcore modules` zeigt Zustand der eingebauten Module
+- Core-Mod: `PeakCoreSession.whenReady` (unabhaengig von der Startreihenfolge der Mods)

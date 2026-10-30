@@ -64,3 +64,17 @@ Mit echtem Dev-Client (`gradlew :core-mod:runClient`, Server `../run/server` mit
 - [ ] Spieler ohne `peakcore.admin` darf `/peakcore` nicht benutzen
 
 Hinweis zum Dev-Client: Beim ersten Start in einem neuen Ordner (`core-mod/run`) zeigt Minecraft den Barrierefreiheits-Bildschirm und ignoriert dadurch den automatischen Beitritt. In `core-mod/run/options.txt` `onboardAccessibility:false` setzen.
+## Phase 6b - All-in-One-Jar (Server)
+
+Automatisch (`./gradlew build`):
+- [x] `ModuleLoaderTest`: Start in Reihenfolge, Beenden umgekehrt, uebersprungenes Modul wird nie gestartet, scheiterndes Modul stoppt die anderen nicht und wird sofort abgebaut, Fehler beim Beenden stoppen die uebrigen nicht, doppelte ID wird abgelehnt
+- [x] `../Bundle` `PluginYmlTest`: Name PeakCore, Hauptklasse im Jar, Befehle `peakcore`/`peaksound`/`peaksoundvote`, alle Rechte der Alpha-Version, Audio-Bibliotheken als `libraries`, ServiceLoader-Datei und Modul-Config im Jar
+
+Auf dem Testserver (nur `PeakCore-0.1.0.jar`, Alpha-Testdaten):
+- [x] Log: `Modul PeakSound (peaksound) gestartet`; Daten aus `plugins/PeakSound` (73 Bloecke, Songs) geladen, kein neuer Ordner
+- [x] `/peakcore modules` zeigt `Eingebaut: PeakSound [peaksound] laeuft`; `/peaksound` und `/peaksoundvote` antworten
+- [x] Neue PeakSound-Mod: Weg `PeakCore`, Handshake ACTIVE, Wiedergabe laeuft (Auto-Debug)
+- [x] `modules.peaksound.enabled: false`: Modul startet nicht, Core laeuft, `/peakcore modules` nennt den Grund
+- [x] Altes `PeakSound`-Jar zusaetzlich in `plugins/`: Fehlermeldung im Log, eingebautes Modul startet nicht, nichts stuerzt ab
+- [ ] Alte (Alpha-)Mod gegen das All-in-One-Jar: nicht erneut durchgespielt (Kanal und Code unveraendert, in Phase 6 geprueft)
+- [ ] Beobachtung: Die neue Mod meldete im Auto-Debug 3 ungueltige `PlaybackStart`-Pakete (Wert ausserhalb des Bereichs) beim Wiederherstellen laufender Jukeboxen aus den Testdaten. Die Wiedergabe-Klassen sind nur mechanisch geaendert; Ursache noch nicht geklaert
