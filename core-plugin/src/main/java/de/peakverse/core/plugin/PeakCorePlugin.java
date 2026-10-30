@@ -2,13 +2,20 @@ package de.peakverse.core.plugin;
 
 import de.peakverse.core.api.ModuleInfo;
 import de.peakverse.core.api.PeakCoreApi;
+import de.peakverse.core.api.module.PeakModule;
 import de.peakverse.core.protocol.Frame;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ServiceConfigurationError;
+import java.util.ServiceLoader;
+import java.util.logging.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.server.PluginDisableEvent;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -19,6 +26,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class PeakCorePlugin extends JavaPlugin implements Listener {
     private ModuleRegistry registry;
     private ChannelService channel;
+    private ModuleLoader modules;
 
     @Override
     public void onEnable() {
@@ -41,16 +49,49 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
         // Der Admin-Status folgt /op und /deop: alle 2 Sekunden abgleichen, gemeldet wird nur bei Aenderungen
         Bukkit.getScheduler().runTaskTimer(this, () -> handshake.checkAdmins(Bukkit.getOnlinePlayers()), 40L, 40L);
 
-        CoreCommand command = new CoreCommand(version, registry, router, handshake);
+        modules = new ModuleLoader(findModules(), this::skipReason, m -> new ModuleHost(this, m, version), getLogger());
+        CoreCommand command = new CoreCommand(version, registry, router, handshake, modules::results);
         getCommand("peakcore").setExecutor(command);
         getCommand("peakcore").setTabCompleter(command);
         getLogger().info("PeakCore " + version + " bereit (API " + PeakCoreApi.API_VERSION + ", Kanal " + Frame.CHANNEL + ").");
+        modules.enableAll(); // erst jetzt: die Module melden sich ueber die API an, die oben bereitgestellt wurde
     }
 
     @Override
     public void onDisable() {
+        if (modules != null) modules.disableAll();
         getServer().getServicesManager().unregisterAll(this);
         if (channel != null) channel.unregister();
+    }
+
+    /** Die eingebauten Module aus dem Jar (ServiceLoader). Ein kaputter Eintrag wird gemeldet und uebersprungen. */
+    private List<PeakModule> findModules() {
+        List<PeakModule> found = new ArrayList<>();
+        Iterator<PeakModule> it = ServiceLoader.load(PeakModule.class, getClass().getClassLoader()).iterator();
+        while (true) {
+            try {
+                if (!it.hasNext()) break;
+                found.add(it.next());
+            } catch (ServiceConfigurationError e) {
+                getLogger().log(Level.SEVERE, "Ein eingebautes Modul konnte nicht geladen werden", e);
+            }
+        }
+        return found;
+    }
+
+    /** Grund, ein Modul nicht zu starten, oder {@code null}. */
+    private String skipReason(PeakModule module) {
+        if (!getConfig().getBoolean("modules." + module.id() + ".enabled", true)) {
+            return "in plugins/PeakCore/config.yml ausgeschaltet (modules." + module.id() + ".enabled)";
+        }
+        Plugin standalone = getServer().getPluginManager().getPlugin(module.displayName());
+        if (standalone != null && standalone != this) {
+            getLogger().severe("Das alte eigenstaendige Plugin " + module.displayName() + " ist noch installiert. Bitte " + module.displayName()
+                    + ".jar aus plugins/ loeschen: PeakCore bringt " + module.displayName() + " jetzt selbst mit. Die Daten in plugins/"
+                    + module.displayName() + " bleiben erhalten.");
+            return "das alte Plugin " + module.displayName() + " ist noch installiert (Jar entfernen)";
+        }
+        return null;
     }
 
     /** Ein abgeschaltetes Plugin verliert seine Modul-Anmeldungen, damit sich das Modul nach einem Neuladen wieder anmelden kann. */

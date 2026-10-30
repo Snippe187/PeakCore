@@ -4,3 +4,9 @@
 non-mod-hint:
   enabled: true
   delay-ticks: 100   # 20 Ticks = 1 Sekunde; so lange wartet der Server auf die Mod, bevor er den Hinweis zeigt
+
+# Eingebaute Module. Ein ausgeschaltetes Modul wird nicht gestartet (nach Aenderung den Server neu starten).
+# Seine Daten bleiben unberuehrt liegen.
+modules:
+  peaksound:
+    enabled: true

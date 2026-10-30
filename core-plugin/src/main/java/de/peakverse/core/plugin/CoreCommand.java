@@ -3,6 +3,7 @@ package de.peakverse.core.plugin;
 import de.peakverse.core.api.PeakCoreApi;
 import de.peakverse.core.protocol.Frame;
 import java.util.List;
+import java.util.function.Supplier;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -20,12 +21,15 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
     private final ModuleRegistry registry;
     private final FrameRouter<?> router;
     private final HandshakeService<Player> handshake;
+    private final Supplier<List<ModuleLoader.Result>> builtIn;
 
-    CoreCommand(String coreVersion, ModuleRegistry registry, FrameRouter<?> router, HandshakeService<Player> handshake) {
+    CoreCommand(String coreVersion, ModuleRegistry registry, FrameRouter<?> router, HandshakeService<Player> handshake,
+            Supplier<List<ModuleLoader.Result>> builtIn) {
         this.coreVersion = coreVersion;
         this.registry = registry;
         this.router = router;
         this.handshake = handshake;
+        this.builtIn = builtIn;
     }
 
     @Override
@@ -34,6 +38,15 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
         switch (sub) {
             case "version" -> sender.sendMessage(Component.text("PeakCore " + coreVersion + " (API " + PeakCoreApi.API_VERSION + ")", NamedTextColor.GOLD));
             case "modules" -> {
+                for (ModuleLoader.Result r : builtIn.get()) {
+                    String state = switch (r.state()) {
+                        case ENABLED -> "laeuft";
+                        case SKIPPED -> "aus: " + r.detail();
+                        case FAILED -> "FEHLER: " + r.detail();
+                    };
+                    sender.sendMessage(Component.text("Eingebaut: " + r.module().displayName() + " [" + r.module().id() + "] " + state,
+                            r.state() == ModuleLoader.State.ENABLED ? NamedTextColor.GREEN : NamedTextColor.RED));
+                }
                 List<ModuleRegistry.Entry> entries = registry.entries();
                 if (entries.isEmpty()) {
                     sender.sendMessage(Component.text("Keine Module angemeldet.", NamedTextColor.GRAY));
