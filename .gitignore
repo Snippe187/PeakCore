@@ -1,0 +1,7 @@
+# Build- und IDE-Ausgaben
+.gradle/
+build/
+.idea/
+*.iml
+out/
+*.class
