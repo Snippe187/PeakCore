@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "peakcore",
+  "version": "${version}",
+  "name": "PeakCore",
+  "description": "Base mod for the PeakVerse mods (PeakSound, TexturePeak, ...). Requires the PeakCore plugin on the server.",
+  "authors": ["PeakVerse contributors"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "main": ["de.peakverse.core.mod.PeakCoreMod"],
+    "client": ["de.peakverse.core.mod.client.PeakCoreClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.20.1",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
