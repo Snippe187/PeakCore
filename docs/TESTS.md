@@ -28,3 +28,19 @@ Auf dem Testserver mit `examples/probe-module` (installieren: `PeakCoreProbe-0.1
 - [x] Beim Abschalten meldet PeakCore das Modul ab (Log: "Modul abgemeldet (Plugin abgeschaltet)")
 - [ ] Paket von einer echten Mod empfangen und Echo zurueck (braucht die Core-Client-Mod, Phase 5)
 - [ ] `/probe send <Spieler>` an einen Spieler mit Mod liefert `true`, ohne Mod `false` (Phase 5)
+
+## Phase 4 - Handshake und Admin-Pruefung
+
+Automatisch:
+- [x] `CorePacketCodecTest` (15): Round-Trips, genaues Format, fremde Protokollversion ohne Lesen des Rests, falsche Richtung, leer/unbekannt/abgeschnitten (jede Schnittstelle), ueberzaehlige Bytes, ungueltige Wahrheitswerte, zu viele Module, ungueltige IDs und Laengen, 20 000 zufaellige Eingaben
+- [x] `HandshakeServiceTest` (14) mit Testumgebung: Antwort erst nach Kanal-Anmeldung, sofortige Antwort, Admin-Status im Ack, inkompatible Mod (Hinweis, kein Event, kein Admin), Wechsel auf passende Mod, erneutes Hello, Hello-Flut gedeckelt, Admin-Aenderungen nur einmal und nur an Spieler mit Mod, kein AdminState vor dem Ack, kaputte Pakete, ClientInfo, Austritt, abgeschnittene Modulliste, Diagnosetext
+- [x] `FrameRouterTest`: Pakete an Module nur nach Handshake, Core-Frames immer
+
+Auf dem Testserver:
+- [x] PeakCore startet mit der neuen Konfiguration (`plugins/PeakCore/config.yml` wird angelegt), `/peakcore players` und `/peakcore status` antworten
+- [ ] **Mit echter Mod (Phase 5):** Hello kommt an, Ack kommt zurueck, `PlayerHandshakeEvent` im Log (das Probe-Modul schreibt "Handshake von ...")
+- [ ] **Mit echter Mod:** Hello vor der Kanal-Anmeldung wird erst nach der Anmeldung beantwortet
+- [ ] **Mit echter Mod:** `/op` und `/deop` aendern den Admin-Status der Mod innerhalb von ca. 2 Sekunden
+- [ ] **Ohne Mod:** Spieler bekommt nach 5 Sekunden den Hinweis im Chat und wird nicht gekickt
+- [ ] **Mit Mod anderer Protokollversion:** Spieler bekommt den Hinweis "passt nicht zusammen" und wird nicht gekickt
+- [ ] `/peakcore` als Spieler ohne `peakcore.admin` wird verweigert

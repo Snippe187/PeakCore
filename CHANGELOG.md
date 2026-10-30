@@ -9,3 +9,7 @@
 - Module empfangen Nutzdaten per `ModuleMessageHandler` und senden per `ModuleRegistration.send`; Fehler in einem Modul stoeren andere nicht
 - `/peakcore status` mit Kanal-Zaehlern
 - Beispielmodul `examples/probe-module`
+- Handshake: Core-Pakete Hello, HelloAck, AdminState; Antwort erst nach Kanal-Anmeldung des Clients; Hinweis bei fremder Protokollversion (kein Kick)
+- API: `isModded`, `client`, `isAdmin`, `PlayerHandshakeEvent`, `ClientInfo`; Pakete an Module nur von Spielern mit abgeschlossenem Handshake
+- Admin-Status folgt /op und /deop (Abgleich alle 2 Sekunden)
+- Chat-Hinweis fuer Spieler ohne Mod (`config.yml`), `/peakcore players`
