@@ -17,6 +17,12 @@ public interface PeakModule {
     /** Startet das Modul. Eine Ausnahme schaltet nur dieses Modul ab; der Core und die anderen Module laufen weiter. */
     void enable(ModuleContext context) throws Exception;
 
+    /**
+     * Legt Dateien fuer das Server-Resource-Pack ab. Optional: wer nichts beitraegt, ueberschreibt das nicht. Der Core ruft sie ab Phase 9 nach
+     * {@link #enable} und bei jedem Neubau des Packs auf; die Methode muss deshalb jedes Mal dasselbe liefern und darf nichts veraendern.
+     */
+    default void contributePack(de.peakverse.core.api.pack.PackSink sink) {}
+
     /** Beendet das Modul und speichert seine Daten. Wird auch aufgerufen, wenn {@link #enable} fehlgeschlagen ist. */
     void disable();
 }

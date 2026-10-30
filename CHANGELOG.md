@@ -17,3 +17,4 @@
 - `core-client`: testbare Zustandsmaschine der Mod
 - All-in-One-Jar: eingebaute Module (`PeakModule` per ServiceLoader, `ModuleContext` mit eigenem Datenordner, Config und Logger), Schalter `modules.<id>.enabled`, Warnung bei altem Einzel-Plugin, `/peakcore modules` zeigt Zustand der eingebauten Module
 - Core-Mod: `PeakCoreSession.whenReady` (unabhaengig von der Startreihenfolge der Mods)
+- API: `PackSink` und `PackPaths` (Pack-Beitrag eines Moduls, strenge Pfadpruefung), `PeakModule.contributePack` (optional; der Core ruft sie ab Phase 9 auf)
