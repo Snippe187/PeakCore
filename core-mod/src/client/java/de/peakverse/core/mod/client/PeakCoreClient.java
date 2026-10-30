@@ -2,6 +2,7 @@ package de.peakverse.core.mod.client;
 
 import de.peakverse.core.client.ClientSession;
 import de.peakverse.core.mod.PeakCoreMod;
+import de.peakverse.core.mod.PeakCoreSession;
 import de.peakverse.core.mod.RawPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
@@ -14,17 +15,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Client-Einstieg von PeakCore. Andere Mods (PeakSound, TexturePeak, ...) holen sich die {@link #session() Sitzung} und melden dort ihr Modul an:
- * <pre>{@code PeakCoreClient.session().registerModule("peaksound", VERSION, payload -> ...);}</pre>
+ * Client-Einstieg von PeakCore. Andere Mods (PeakSound, TexturePeak, ...) holen sich die Sitzung mit {@link PeakCoreSession#get()} und melden dort ihr Modul an:
+ * <pre>{@code PeakCoreSession.get().registerModule("peaksound", VERSION, payload -> ...);}</pre>
  * Am besten in ihrem eigenen Client-Einstieg, solange die Mods starten; so steht ihre ID schon im Hello, das beim Beitritt geschickt wird.
  */
 public final class PeakCoreClient implements ClientModInitializer {
     private static final Logger LOG = LoggerFactory.getLogger("PeakCore");
-
-    /** Die Sitzung wird beim ersten Zugriff angelegt, egal welche Mod zuerst startet. */
-    private static final class Holder {
-        static final ClientSession SESSION = new ClientSession(PeakCoreMod.VERSION, new FabricTransport(), System::currentTimeMillis);
-    }
 
     /** Verbindung zum Server ueber das Fabric-Netzwerk. */
     private static final class FabricTransport implements ClientSession.Transport {
@@ -39,14 +35,10 @@ public final class PeakCoreClient implements ClientModInitializer {
         }
     }
 
-    /** Die gemeinsame Sitzung dieser Mod mit dem Server (Handshake, Admin-Status, Modul-Routing). */
-    public static ClientSession session() {
-        return Holder.SESSION;
-    }
-
     @Override
     public void onInitializeClient() {
-        ClientSession session = session();
+        ClientSession session = new ClientSession(PeakCoreMod.VERSION, new FabricTransport(), System::currentTimeMillis);
+        PeakCoreSession.install(session);
         session.addListener(new ClientSession.Listener() {
             @Override
             public void onStateChanged(ClientSession.State previous, ClientSession.State now) {
