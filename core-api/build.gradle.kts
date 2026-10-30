@@ -12,6 +12,8 @@ repositories {
 }
 
 dependencies {
+    // Module-ID-Regeln und Paketformat gehoeren zur API (Module sehen sie transitiv)
+    api(project(":core-protocol"))
     // Die API haengt nur an der Bukkit-Schnittstelle (Plugin, ServicesManager); zur Laufzeit liefert sie der Server
     compileOnly("io.papermc.paper:paper-api:${property("paper_api_version")}")
 

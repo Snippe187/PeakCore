@@ -1,0 +1,11 @@
+name: PeakCoreProbe
+version: '${version}'
+main: de.peakverse.probe.ProbePlugin
+api-version: '26.2'
+description: "Beispiel- und Testmodul fuer PeakCore (nicht fuer den Dauerbetrieb)"
+depend: [PeakCore]
+commands:
+  probe:
+    description: Testet die Anmeldung und den Kanal von PeakCore
+    usage: /probe <info|send <Spieler>|duplicate|toonew>
+    permission: peakcore.admin

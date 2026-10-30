@@ -33,4 +33,5 @@ tasks.processResources {
 tasks.jar {
     archiveBaseName = "PeakCore"
     from(project(":core-api").sourceSets["main"].output)
+    from(project(":core-protocol").sourceSets["main"].output)
 }

@@ -11,14 +11,16 @@ import org.bukkit.command.TabCompleter;
 
 /** {@code /peakcore}: zeigt Version und angemeldete Module. Nur fuer Operatoren (Recht peakcore.admin). */
 final class CoreCommand implements CommandExecutor, TabCompleter {
-    private static final List<String> SUB = List.of("version", "modules");
+    private static final List<String> SUB = List.of("version", "modules", "status");
 
     private final String coreVersion;
     private final ModuleRegistry registry;
+    private final FrameRouter<?> router;
 
-    CoreCommand(String coreVersion, ModuleRegistry registry) {
+    CoreCommand(String coreVersion, ModuleRegistry registry, FrameRouter<?> router) {
         this.coreVersion = coreVersion;
         this.registry = registry;
+        this.router = router;
     }
 
     @Override
@@ -38,8 +40,14 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
                             + ", Plugin " + e.owner() + ", API ab " + e.info().requiredApi() + "]", NamedTextColor.YELLOW));
                 }
             }
+            case "status" -> {
+                FrameRouter.Stats s = router.stats();
+                sender.sendMessage(Component.text("Kanal " + de.peakverse.core.protocol.Frame.CHANNEL + ": " + s.received() + " Pakete empfangen, "
+                        + s.delivered() + " zugestellt, " + s.malformed() + " ungueltig, " + s.unknownModule() + " an unbekannte Module, "
+                        + s.handlerErrors() + " Handler-Fehler", NamedTextColor.GOLD));
+            }
             default -> {
-                sender.sendMessage(Component.text("Benutzung: /" + label + " <version|modules>", NamedTextColor.RED));
+                sender.sendMessage(Component.text("Benutzung: /" + label + " <version|modules|status>", NamedTextColor.RED));
                 return false;
             }
         }

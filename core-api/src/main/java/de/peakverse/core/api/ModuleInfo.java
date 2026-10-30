@@ -1,6 +1,6 @@
 package de.peakverse.core.api;
 
-import java.util.regex.Pattern;
+import de.peakverse.core.protocol.ModuleIds;
 
 /**
  * Beschreibung eines Moduls, das sich bei PeakCore anmeldet.
@@ -11,10 +11,8 @@ import java.util.regex.Pattern;
  * @param requiredApi kleinste Version der Core-API, die das Modul braucht (siehe {@link PeakCoreApi#API_VERSION})
  */
 public record ModuleInfo(String id, String displayName, String version, int requiredApi) {
-    private static final Pattern ID = Pattern.compile("[a-z][a-z0-9_]{1,23}");
-
     public ModuleInfo {
-        if (id == null || !ID.matcher(id).matches()) {
+        if (!ModuleIds.isValid(id)) {
             throw new IllegalArgumentException("Modul-ID muss aus 2-24 Zeichen bestehen (a-z, 0-9, _) und mit einem Buchstaben beginnen: " + id);
         }
         if (displayName == null || displayName.isBlank() || displayName.length() > 40) {
