@@ -3,6 +3,8 @@ package de.peakverse.core.plugin;
 import de.peakverse.core.api.ModuleInfo;
 import de.peakverse.core.api.PeakCoreApi;
 import de.peakverse.core.api.module.PeakModule;
+import de.peakverse.core.plugin.pack.PackMeta;
+import de.peakverse.core.plugin.pack.PackService;
 import de.peakverse.core.protocol.Frame;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -27,6 +29,7 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
     private ModuleRegistry registry;
     private ChannelService channel;
     private ModuleLoader modules;
+    private PackService packs;
 
     @Override
     public void onEnable() {
@@ -50,7 +53,13 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
         Bukkit.getScheduler().runTaskTimer(this, () -> handshake.checkAdmins(Bukkit.getOnlinePlayers()), 40L, 40L);
 
         modules = new ModuleLoader(findModules(), this::skipReason, m -> new ModuleHost(this, m, version), getLogger());
-        CoreCommand command = new CoreCommand(version, registry, router, handshake, modules::results);
+        packs = new PackService(
+                () -> modules.results().stream().filter(r -> r.state() == ModuleLoader.State.ENABLED).map(ModuleLoader.Result::module).toList(),
+                getDataFolder().toPath().resolve("pack"),
+                () -> new PackMeta(getConfig().getString("pack.description", "PeakVerse"), getConfig().getInt("pack.format-major", 88),
+                        getConfig().getInt("pack.format-minor", 0)),
+                getLogger());
+        CoreCommand command = new CoreCommand(version, registry, router, handshake, modules::results, packs);
         getCommand("peakcore").setExecutor(command);
         getCommand("peakcore").setTabCompleter(command);
         getLogger().info("PeakCore " + version + " bereit (API " + PeakCoreApi.API_VERSION + ", Kanal " + Frame.CHANNEL + ").");

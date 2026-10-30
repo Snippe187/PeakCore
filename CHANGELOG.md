@@ -18,3 +18,4 @@
 - All-in-One-Jar: eingebaute Module (`PeakModule` per ServiceLoader, `ModuleContext` mit eigenem Datenordner, Config und Logger), Schalter `modules.<id>.enabled`, Warnung bei altem Einzel-Plugin, `/peakcore modules` zeigt Zustand der eingebauten Module
 - Core-Mod: `PeakCoreSession.whenReady` (unabhaengig von der Startreihenfolge der Mods)
 - API: `PackSink` und `PackPaths` (Pack-Beitrag eines Moduls, strenge Pfadpruefung), `PeakModule.contributePack` (optional; der Core ruft sie ab Phase 9 auf)
+- Pack-Bau: deterministisches ZIP (sortiert, fester Zeitstempel, unkomprimiert) mit stabilem SHA1, `pack.mcmeta` aus der Config, Beitraege je Modul mit Konflikt-Erkennung, Ablage in `plugins/PeakCore/pack/`, `/peakcore pack status|rebuild`

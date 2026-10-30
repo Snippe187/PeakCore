@@ -1,6 +1,7 @@
 package de.peakverse.core.plugin;
 
 import de.peakverse.core.api.PeakCoreApi;
+import de.peakverse.core.plugin.pack.PackService;
 import de.peakverse.core.protocol.Frame;
 import java.util.List;
 import java.util.function.Supplier;
@@ -15,7 +16,7 @@ import org.bukkit.entity.Player;
 
 /** {@code /peakcore}: Version, Module, Kanal-Status und Spieler mit Mod. Nur fuer Administratoren (Recht peakcore.admin). */
 final class CoreCommand implements CommandExecutor, TabCompleter {
-    private static final List<String> SUB = List.of("version", "modules", "status", "players");
+    private static final List<String> SUB = List.of("version", "modules", "status", "players", "pack");
 
     private final String coreVersion;
     private final ModuleRegistry registry;
@@ -23,8 +24,11 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
     private final HandshakeService<Player> handshake;
     private final Supplier<List<ModuleLoader.Result>> builtIn;
 
+    private final PackService packs;
+
     CoreCommand(String coreVersion, ModuleRegistry registry, FrameRouter<?> router, HandshakeService<Player> handshake,
-            Supplier<List<ModuleLoader.Result>> builtIn) {
+            Supplier<List<ModuleLoader.Result>> builtIn, PackService packs) {
+        this.packs = packs;
         this.coreVersion = coreVersion;
         this.registry = registry;
         this.router = router;
@@ -73,18 +77,46 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(Component.text(" - " + p.getName() + ": " + handshake.describe(p), ok ? NamedTextColor.GREEN : NamedTextColor.GRAY));
                 }
             }
+            case "pack" -> pack(sender, args.length > 1 ? args[1].toLowerCase() : "status");
             default -> {
-                sender.sendMessage(Component.text("Benutzung: /" + label + " <version|modules|status|players>", NamedTextColor.RED));
+                sender.sendMessage(Component.text("Benutzung: /" + label + " <version|modules|status|players|pack>", NamedTextColor.RED));
                 return false;
             }
         }
         return true;
     }
 
+    private void pack(CommandSender sender, String action) {
+        switch (action) {
+            case "status" -> {
+                PackService.Status s = packs.status();
+                if (s == null) sender.sendMessage(Component.text("Das Pack wurde noch nicht gebaut: /peakcore pack rebuild", NamedTextColor.GRAY));
+                else describe(sender, s);
+            }
+            case "rebuild" -> {
+                try {
+                    PackService.Status s = packs.rebuild();
+                    sender.sendMessage(Component.text(s.written() ? "Pack neu gebaut." : "Pack unveraendert (gleicher Inhalt, nichts neu geschrieben).", NamedTextColor.GREEN));
+                    describe(sender, s);
+                } catch (Exception e) {
+                    sender.sendMessage(Component.text("Pack konnte nicht gebaut werden: " + e, NamedTextColor.RED));
+                }
+            }
+            default -> sender.sendMessage(Component.text("Benutzung: /peakcore pack <status|rebuild>", NamedTextColor.RED));
+        }
+    }
+
+    private static void describe(CommandSender sender, PackService.Status s) {
+        sender.sendMessage(Component.text("Pack " + s.sha1() + ": " + s.fileCount() + " Dateien (mit pack.mcmeta), " + s.size() + " Bytes, Beitraege "
+                + (s.filesByModule().isEmpty() ? "keine" : s.filesByModule().toString()), NamedTextColor.GOLD));
+        for (String problem : s.problems()) sender.sendMessage(Component.text("  Ausgelassen: " + problem, NamedTextColor.RED));
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length != 1) return List.of();
-        String prefix = args[0].toLowerCase();
-        return SUB.stream().filter(s -> s.startsWith(prefix)).toList();
+        String prefix = args[args.length - 1].toLowerCase();
+        if (args.length == 1) return SUB.stream().filter(s -> s.startsWith(prefix)).toList();
+        if (args.length == 2 && args[0].equalsIgnoreCase("pack")) return List.of("status", "rebuild").stream().filter(s -> s.startsWith(prefix)).toList();
+        return List.of();
     }
 }

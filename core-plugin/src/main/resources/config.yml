@@ -5,6 +5,13 @@ non-mod-hint:
   enabled: true
   delay-ticks: 100   # 20 Ticks = 1 Sekunde; so lange wartet der Server auf die Mod, bevor er den Hinweis zeigt
 
+# Server-Resource-Pack (gebaut mit /peakcore pack rebuild). Das Format steht in der version.json des Servers
+# (Minecraft 26.2: resource_major 88, resource_minor 0) und aendert sich mit jeder Minecraft-Version.
+pack:
+  description: "PeakVerse"
+  format-major: 88
+  format-minor: 0
+
 # Eingebaute Module. Ein ausgeschaltetes Modul wird nicht gestartet (nach Aenderung den Server neu starten).
 # Seine Daten bleiben unberuehrt liegen.
 modules:

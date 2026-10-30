@@ -78,3 +78,19 @@ Auf dem Testserver (nur `PeakCore-0.1.0.jar`, Alpha-Testdaten):
 - [x] Altes `PeakSound`-Jar zusaetzlich in `plugins/`: Fehlermeldung im Log, eingebautes Modul startet nicht, nichts stuerzt ab
 - [ ] Alte (Alpha-)Mod gegen das All-in-One-Jar: nicht erneut durchgespielt (Kanal und Code unveraendert, in Phase 6 geprueft)
 - [x] Beobachtung geklaert: Die 3 ungueltigen `PlaybackStart`-Pakete aus dem ersten Lauf traten beim zweiten Lauf nicht mehr auf (0 ungueltig, Auto-Debug mit vollem Hex-Dump). Die Settings der Testdaten sind gueltig (Reichweite 16, Lautstaerke <= 100); die genaue Ursache blieb ungeklaert, vermutlich ein Zeitzustand direkt nach dem Neustart. Der Debug-Bericht zeigt Ungueltige Pakete jetzt komplett (128 Bytes).
+
+## Phase 9 - Pack bauen
+
+Automatisch (`PackTest`, 13 Tests):
+- [x] Gleiche Dateien in beliebiger Reihenfolge ergeben dieselben Bytes und denselben SHA1; jede Aenderung (Inhalt, Pfad, Beschreibung) aendert den Hash
+- [x] SHA1 gehoert zu den ZIP-Bytes; Eintraege sortiert, `pack.mcmeta` immer dabei, `pack.png` optional
+- [x] `pack.mcmeta` ist dem Core vorbehalten; ungueltige Pfade (`../`, Grossbuchstaben) werden abgelehnt; zweiter Beitrag zum selben Pfad nennt beide Besitzer
+- [x] Ein Modul mit Fehler oder Pfad-Konflikt fehlt **ganz** im Pack, die anderen bleiben; Meldung in `/peakcore pack status`
+- [x] Gleicher Inhalt: Datei wird nicht neu geschrieben; hoechstens 5 Packs im Ordner, das aktuelle bleibt
+
+Auf dem Testserver (All-in-One-Jar, `/peakcore pack status|rebuild`):
+- [x] Vor dem ersten Bau: Hinweis; Bau: `plugins/PeakCore/pack/pack-<sha1>.zip`; zweiter Bau: "unveraendert"; Datei-SHA1 stimmt mit der Anzeige ueberein
+- [ ] **Offen:** ob Minecraft 26.2 die `pack.mcmeta` mit `min_format`/`max_format` `[88, 0]` (ohne `pack_format`) annimmt: erst mit einem echten Client pruefbar (Phase 10/13)
+- [ ] Offen: ein echtes Modul mit Dateien (PeakSound liefert noch keine); nur per Unit-Test mit Test-Modulen geprueft
+
+Bekannte Grenzen: Das ZIP ist unkomprimiert (STORED), damit der Hash nicht von der zlib-Version abhaengt; gebaut wird auf dem Haupt-Thread (bei grossen Packs spaeter asynchron).
