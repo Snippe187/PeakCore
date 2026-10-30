@@ -13,3 +13,5 @@
 - API: `isModded`, `client`, `isAdmin`, `PlayerHandshakeEvent`, `ClientInfo`; Pakete an Module nur von Spielern mit abgeschlossenem Handshake
 - Admin-Status folgt /op und /deop (Abgleich alle 2 Sekunden)
 - Chat-Hinweis fuer Spieler ohne Mod (`config.yml`), `/peakcore players`
+- Core-Mod fuer den Client (Fabric): Handshake, Modul-Routing (`PeakCoreClient.session()`), Admin-Status, `/peakcorestatus`
+- `core-client`: testbare Zustandsmaschine der Mod

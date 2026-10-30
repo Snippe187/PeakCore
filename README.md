@@ -2,7 +2,7 @@
 
 Basis-Plugin fuer die PeakVerse-Module (PeakSound, TexturePeak, ...). Module haengen von PeakCore ab (`depend: [PeakCore]`) und laden ohne PeakCore nicht.
 
-**Stand: Phase 4** - oeffentliche API, Modul-Anmeldung mit Versionspruefung, Kanal `peakcore:main` mit Umschlag (Modul-ID + Nutzdaten), Handshake mit der Mod (Version, Admin-Status, Modulliste), Admin-Pruefung, `/peakcore`. Der Resource-Pack-Dienst folgt in den naechsten Phasen (siehe `../docs/PLAN.md`). Paketformat: `docs/PROTOCOL.md`.
+**Stand: Phase 5** - oeffentliche API, Modul-Anmeldung mit Versionspruefung, Kanal `peakcore:main` mit Umschlag (Modul-ID + Nutzdaten), Handshake mit der Mod (Version, Admin-Status, Modulliste), Admin-Pruefung, `/peakcore`, Core-Mod fuer den Client. Der Resource-Pack-Dienst folgt in den naechsten Phasen (siehe `../docs/PLAN.md`). Paketformat: `docs/PROTOCOL.md`.
 
 ## Aufbau
 
@@ -10,6 +10,8 @@ Basis-Plugin fuer die PeakVerse-Module (PeakSound, TexturePeak, ...). Module hae
 |---|---|
 | `core-protocol` | Paketformat (Umschlag, Codec, Modul-ID-Regeln), reine Java-Bibliothek ohne Bukkit, auch fuer die Mod |
 | `core-api` | Oeffentliche Schnittstelle fuer Module (`PeakCoreApi`, `ModuleInfo`, `ModuleRegistration`, `ModuleMessageHandler`) |
+| `core-client` | Zustandsmaschine der Mod (Handshake, Wiederholung, Modul-Routing), reine Java-Bibliothek ohne Minecraft |
+| `core-mod` | Fabric-Mod `PeakCore-<Version>.jar` fuer den Client; haengt die Sitzung an das Fabric-Netzwerk |
 | `core-plugin` | Das Plugin (`PeakCore-<Version>.jar`); enthaelt API und Protokoll gleich mit |
 | `examples/probe-module` | Beispiel- und Testmodul (nicht Teil des Cores) |
 
@@ -54,3 +56,18 @@ Ereignis fuer Module: `PlayerHandshakeEvent` (Haupt-Thread) nach erfolgreichem H
 ```
 
 Oder alle Module gemeinsam: `../tools/build-all.ps1 -Install`.
+
+## Die Mod (Client)
+
+Andere Mods melden ihr Modul in der gemeinsamen Sitzung an, am besten in ihrem Client-Einstieg:
+
+```java
+ClientSession session = PeakCoreClient.session();
+ClientSession.ModuleChannel channel = session.registerModule("peaksound", "0.1.0", payload -> { /* Daten vom Server */ });
+if (channel.send(bytes)) { ... }   // false, solange der Handshake nicht geschafft ist
+session.isActive(); session.isAdmin(); session.serverHasModule("peaksound"); session.serverNow();
+```
+
+Beim Beitritt schickt die Mod `Hello` (mit allen angemeldeten Modulen), sobald der Server den Kanal meldet, und wiederholt es alle 2 Sekunden bis zu 10-mal. Kennt der Server den Kanal nach 10 Sekunden nicht (kein PeakCore), bleibt die Mod still. Client-Befehl `/peakcorestatus` zeigt den Zustand.
+
+Dev-Client: `./gradlew :core-mod:runClient` verbindet als `PeakDev` mit `localhost:25565` und meldet das Test-Modul `probe` an (Gegenstueck zu `examples/probe-module`).

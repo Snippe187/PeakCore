@@ -26,8 +26,8 @@ Auf dem Testserver mit `examples/probe-module` (installieren: `PeakCoreProbe-0.1
 - [x] `/probe toonew`: Modul mit zu neuer API wird abgelehnt
 - [x] `/peakcore status` zeigt die Zaehler (alle 0 ohne Client)
 - [x] Beim Abschalten meldet PeakCore das Modul ab (Log: "Modul abgemeldet (Plugin abgeschaltet)")
-- [ ] Paket von einer echten Mod empfangen und Echo zurueck (braucht die Core-Client-Mod, Phase 5)
-- [ ] `/probe send <Spieler>` an einen Spieler mit Mod liefert `true`, ohne Mod `false` (Phase 5)
+- [x] Paket von einer echten Mod empfangen und Echo zurueck (Dev-Client: "ping" gesendet, Plugin-Log "Paket von PeakDev: 4 Bytes", Client-Log "4 Bytes vom Server empfangen: ping")
+- [x] `/probe send PeakDev` an einen Spieler mit Mod liefert `true` (der Fall "ohne Mod" liefert `false`: noch nicht mit einem echten Spieler ohne Mod geprueft)
 
 ## Phase 4 - Handshake und Admin-Pruefung
 
@@ -38,9 +38,29 @@ Automatisch:
 
 Auf dem Testserver:
 - [x] PeakCore startet mit der neuen Konfiguration (`plugins/PeakCore/config.yml` wird angelegt), `/peakcore players` und `/peakcore status` antworten
-- [ ] **Mit echter Mod (Phase 5):** Hello kommt an, Ack kommt zurueck, `PlayerHandshakeEvent` im Log (das Probe-Modul schreibt "Handshake von ...")
+- [x] **Mit echter Mod (Phase 5):** Hello kommt an, Ack kommt zurueck, `PlayerHandshakeEvent` im Log (Probe: "Handshake von PeakDev: Mod 0.1.0, Module [probe], Admin: true")
 - [ ] **Mit echter Mod:** Hello vor der Kanal-Anmeldung wird erst nach der Anmeldung beantwortet
-- [ ] **Mit echter Mod:** `/op` und `/deop` aendern den Admin-Status der Mod innerhalb von ca. 2 Sekunden
+- [x] **Mit echter Mod:** `/op` und `/deop` aendern den Admin-Status der Mod innerhalb von ca. 2 Sekunden (Client-Log: "Admin-Status geaendert: false" / "true")
 - [ ] **Ohne Mod:** Spieler bekommt nach 5 Sekunden den Hinweis im Chat und wird nicht gekickt
 - [ ] **Mit Mod anderer Protokollversion:** Spieler bekommt den Hinweis "passt nicht zusammen" und wird nicht gekickt
 - [ ] `/peakcore` als Spieler ohne `peakcore.admin` wird verweigert
+
+## Phase 5 - Core-Client-Mod
+
+Automatisch (`./gradlew build`):
+- [x] `ClientSessionTest` (19): Hello mit den angemeldeten Modulen, Warten auf den Kanal und Aufgeben nach 10 s (kein PeakCore auf dem Server), Hello sofort nach Kanal-Meldung, Wiederholung alle 2 s bis 10 Versuche, keine Wiederholung nach der Antwort, inkompatibler Server (Mod bleibt inaktiv), Pakete an Module erst nach dem Handshake, fehlerhafter Handler stoert nicht, Senden nur im aktiven Zustand und mit Groessengrenze, Admin-Status (nur aktiv, Meldung nur bei Aenderung), Trennung setzt alles zurueck, spaete Modul-Anmeldung sendet neues Hello, Abmelden, ungueltige und doppelte Module, unerwartete Antworten, 20 000 zufaellige Pakete
+
+Mit echtem Dev-Client (`gradlew :core-mod:runClient`, Server `../run/server` mit PeakCore und PeakCoreProbe):
+- [x] Client verbindet, Hello kommt an, Server-Log "Mod meldet sich (Core-Protokoll 1, Server 1, Module: probe 0.1.0)"
+- [x] Client-Log: Zustand OFFLINE -> WAITING -> ACTIVE mit Server-Core, Admin-Status und Modulliste
+- [x] Echo: Client sendet "ping", das Plugin echot es, der Client protokolliert die Antwort; das Plugin schickt nach dem Handshake zusaetzlich "hallo"
+- [x] `/peakcore players`: "PeakDev: Core-Protokoll 1 (kompatibel), Mod 0.1.0, Module: probe 0.1.0"; `/peakcore status`: 2 Pakete empfangen, 2 zugestellt, 0 ungueltig
+- [x] `/deop` und `/op` erreichen die Mod innerhalb von etwa 2 Sekunden
+- [x] Beim Beenden des Clients meldet sich der Spieler sauber ab
+- [ ] Server ohne PeakCore: Mod bleibt still und geht nach 10 s in "kein Server-Support" (nur durch Unit-Test abgedeckt)
+- [ ] Mod mit fremder Protokollversion gegen den Server (nur durch Unit-Tests abgedeckt)
+- [ ] Spieler ohne Mod bekommt den Chat-Hinweis (braucht einen Client ohne Mod)
+- [ ] `/peakcorestatus` im Spiel eingeben (Client-Befehl; ich habe die Ausgabe nur ueber das Log geprueft, nicht im Chat)
+- [ ] Spieler ohne `peakcore.admin` darf `/peakcore` nicht benutzen
+
+Hinweis zum Dev-Client: Beim ersten Start in einem neuen Ordner (`core-mod/run`) zeigt Minecraft den Barrierefreiheits-Bildschirm und ignoriert dadurch den automatischen Beitritt. In `core-mod/run/options.txt` `onboardAccessibility:false` setzen.
