@@ -94,3 +94,16 @@ Auf dem Testserver (All-in-One-Jar, `/peakcore pack status|rebuild`):
 - [ ] Offen: ein echtes Modul mit Dateien (PeakSound liefert noch keine); nur per Unit-Test mit Test-Modulen geprueft
 
 Bekannte Grenzen: Das ZIP ist unkomprimiert (STORED), damit der Hash nicht von der zlib-Version abhaengt; gebaut wird auf dem Haupt-Thread (bei grossen Packs spaeter asynchron).
+
+## Phase 10 - Webserver und Versand
+
+Automatisch (`PackWebTest`, 8 Tests): [x] liefert das Pack (Inhalt, Content-Type), HEAD mit Groesse, 404 fuer alles ausser `/pack/<40 Hex>.zip` (auch `..`, `%2e%2e`, Grossbuchstaben, fremde Dateien im Ordner), 405 fuer POST/DELETE, spaeter gebaute Packs ohne Neustart, belegter Port scheitert sauber, Stopp schliesst den Port, URL-Regeln (`public-url`, `external-url` mit `{sha1}`, Fehler bei falschem Schema)
+
+Auf dem Testserver (Webserver an, Port 8123, `public-url` localhost):
+- [x] Start meldet Port und baut das Pack; `GET /pack/<sha1>.zip` liefert 200 `application/zip`, SHA1 der heruntergeladenen Datei stimmt; `/`, `/pack/../x` sind 404
+- [x] `/peakcore pack status` zeigt Webserver, Senden und Adresse; `resend` ohne Spieler: "an 0 Spieler"; `rebuild` ohne Aenderung sendet nichts neu
+- [ ] **Offen: Annahme beim echten Client.** Der Dev-Client bekam das Pack beim Beitritt angeboten, das Annahme-Fenster wurde aber nicht bestaetigt; es gibt kein "Pack bei PeakDev"-Log. Download, Anwenden und die `pack.mcmeta`-Form (`min_format`/`max_format`) sind damit weiter ungeprueft.
+- [ ] Offen: Neusenden nach Aenderung an einen Spieler, der das alte Pack hat (gleiche Pack-ID, soll ersetzen); Verhalten bei `required: true`
+- [ ] Offen: von aussen erreichbarer Port (Firewall/Router) und HTTPS: haengt vom echten Server ab
+
+Standard ist alles aus (`pack.web.enabled`, `pack.send.enabled` = false): keine neuen offenen Ports ohne Zutun.

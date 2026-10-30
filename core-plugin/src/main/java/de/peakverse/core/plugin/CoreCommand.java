@@ -2,6 +2,7 @@ package de.peakverse.core.plugin;
 
 import de.peakverse.core.api.PeakCoreApi;
 import de.peakverse.core.plugin.pack.PackService;
+import de.peakverse.core.plugin.pack.PackWebServer;
 import de.peakverse.core.protocol.Frame;
 import java.util.List;
 import java.util.function.Supplier;
@@ -25,10 +26,14 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
     private final Supplier<List<ModuleLoader.Result>> builtIn;
 
     private final PackService packs;
+    private final PackSender sender;
+    private final PackWebServer web;
 
     CoreCommand(String coreVersion, ModuleRegistry registry, FrameRouter<?> router, HandshakeService<Player> handshake,
-            Supplier<List<ModuleLoader.Result>> builtIn, PackService packs) {
+            Supplier<List<ModuleLoader.Result>> builtIn, PackService packs, PackSender sender, PackWebServer web) {
         this.packs = packs;
+        this.sender = sender;
+        this.web = web;
         this.coreVersion = coreVersion;
         this.registry = registry;
         this.router = router;
@@ -92,18 +97,43 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
                 PackService.Status s = packs.status();
                 if (s == null) sender.sendMessage(Component.text("Das Pack wurde noch nicht gebaut: /peakcore pack rebuild", NamedTextColor.GRAY));
                 else describe(sender, s);
+                delivery(sender);
             }
             case "rebuild" -> {
                 try {
+                    PackService.Status before = packs.status();
                     PackService.Status s = packs.rebuild();
                     sender.sendMessage(Component.text(s.written() ? "Pack neu gebaut." : "Pack unveraendert (gleicher Inhalt, nichts neu geschrieben).", NamedTextColor.GREEN));
                     describe(sender, s);
+                    if (this.sender.enabled() && (before == null || !before.sha1().equals(s.sha1()))) {
+                        sender.sendMessage(Component.text("Neues Pack an " + this.sender.sendAll(Bukkit.getOnlinePlayers()) + " Spieler geschickt.", NamedTextColor.GREEN));
+                    }
                 } catch (Exception e) {
                     sender.sendMessage(Component.text("Pack konnte nicht gebaut werden: " + e, NamedTextColor.RED));
                 }
             }
-            default -> sender.sendMessage(Component.text("Benutzung: /peakcore pack <status|rebuild>", NamedTextColor.RED));
+            case "resend" -> {
+                if (packs.status() == null) {
+                    sender.sendMessage(Component.text("Das Pack wurde noch nicht gebaut: /peakcore pack rebuild", NamedTextColor.RED));
+                } else if (this.sender.currentUrl() == null) {
+                    sender.sendMessage(Component.text("Keine Adresse: pack.public-url oder pack.external-url in der config.yml eintragen.", NamedTextColor.RED));
+                } else {
+                    sender.sendMessage(Component.text("Pack an " + this.sender.sendAll(Bukkit.getOnlinePlayers()) + " Spieler geschickt.", NamedTextColor.GREEN));
+                }
+            }
+            default -> sender.sendMessage(Component.text("Benutzung: /peakcore pack <status|rebuild|resend>", NamedTextColor.RED));
         }
+    }
+
+    private void delivery(CommandSender sender) {
+        String url;
+        try {
+            url = this.sender.currentUrl();
+        } catch (IllegalArgumentException e) {
+            url = "FEHLER: " + e.getMessage();
+        }
+        sender.sendMessage(Component.text("Webserver: " + (web.running() ? "laeuft auf Port " + web.port() : "aus") + ", Senden: " + (this.sender.enabled() ? "an" : "aus")
+                + ", Adresse: " + (url == null ? "nicht eingestellt" : url), NamedTextColor.GRAY));
     }
 
     private static void describe(CommandSender sender, PackService.Status s) {
@@ -116,7 +146,7 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         String prefix = args[args.length - 1].toLowerCase();
         if (args.length == 1) return SUB.stream().filter(s -> s.startsWith(prefix)).toList();
-        if (args.length == 2 && args[0].equalsIgnoreCase("pack")) return List.of("status", "rebuild").stream().filter(s -> s.startsWith(prefix)).toList();
+        if (args.length == 2 && args[0].equalsIgnoreCase("pack")) return List.of("status", "rebuild", "resend").stream().filter(s -> s.startsWith(prefix)).toList();
         return List.of();
     }
 }

@@ -12,6 +12,22 @@ pack:
   format-major: 88
   format-minor: 0
 
+  # Eingebauter Webserver, von dem die Spieler das Pack laden. Aus, bis du ihn einschaltest (er oeffnet einen Port).
+  # Der Port muss in der Firewall/beim Anbieter freigegeben sein (TCP), sonst kommt das Pack nicht an.
+  web:
+    enabled: false
+    port: 8123
+    bind: "0.0.0.0"
+  # Adresse, unter der Spieler den Webserver erreichen, z. B. "http://play.example.com:8123". Ohne sie wird nichts gesendet.
+  public-url: ""
+  # Ausweg: liegt das Pack woanders (Webspace, CDN), hier die volle Adresse mit {sha1}, z. B. "https://example.com/packs/{sha1}.zip".
+  # Hat Vorrang vor public-url; dann ist der eingebaute Webserver nicht noetig.
+  external-url: ""
+  send:
+    enabled: false        # Pack beim Beitritt (und nach Aenderungen) an die Spieler schicken
+    required: false       # true: wer ablehnt, wird vom Server getrennt
+    prompt: ""            # Text im Annahme-Dialog; leer = keiner
+
 # Eingebaute Module. Ein ausgeschaltetes Modul wird nicht gestartet (nach Aenderung den Server neu starten).
 # Seine Daten bleiben unberuehrt liegen.
 modules:

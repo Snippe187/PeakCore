@@ -5,6 +5,7 @@ import de.peakverse.core.api.PeakCoreApi;
 import de.peakverse.core.api.module.PeakModule;
 import de.peakverse.core.plugin.pack.PackMeta;
 import de.peakverse.core.plugin.pack.PackService;
+import de.peakverse.core.plugin.pack.PackWebServer;
 import de.peakverse.core.protocol.Frame;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -30,6 +31,8 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
     private ChannelService channel;
     private ModuleLoader modules;
     private PackService packs;
+    private PackWebServer web;
+    private PackSender sender;
 
     @Override
     public void onEnable() {
@@ -59,15 +62,41 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
                 () -> new PackMeta(getConfig().getString("pack.description", "PeakVerse"), getConfig().getInt("pack.format-major", 88),
                         getConfig().getInt("pack.format-minor", 0)),
                 getLogger());
-        CoreCommand command = new CoreCommand(version, registry, router, handshake, modules::results, packs);
+        web = new PackWebServer(getDataFolder().toPath().resolve("pack"), getConfig().getString("pack.web.bind", "0.0.0.0"), getConfig().getInt("pack.web.port", 8123), getLogger());
+        sender = new PackSender(this, packs, getLogger());
+        getServer().getPluginManager().registerEvents(sender, this);
+        CoreCommand command = new CoreCommand(version, registry, router, handshake, modules::results, packs, sender, web);
         getCommand("peakcore").setExecutor(command);
         getCommand("peakcore").setTabCompleter(command);
         getLogger().info("PeakCore " + version + " bereit (API " + PeakCoreApi.API_VERSION + ", Kanal " + Frame.CHANNEL + ").");
         modules.enableAll(); // erst jetzt: die Module melden sich ueber die API an, die oben bereitgestellt wurde
+        startPack();
+    }
+
+    /** Webserver starten und das Pack einmal bauen, wenn der Server es ausliefern oder senden soll. Fehler hier legen den Core nicht lahm. */
+    private void startPack() {
+        boolean webOn = getConfig().getBoolean("pack.web.enabled", false);
+        if (webOn) {
+            try {
+                web.start();
+                getLogger().info("Pack-Webserver laeuft auf Port " + web.port() + " (public-url: " + getConfig().getString("pack.public-url", "") + ").");
+            } catch (java.io.IOException e) {
+                getLogger().severe("Pack-Webserver konnte nicht starten (Port " + web.port() + " belegt oder Adresse falsch?): " + e.getMessage());
+            }
+        }
+        if (webOn || sender.enabled()) {
+            try {
+                PackService.Status s = packs.rebuild();
+                getLogger().info("Pack gebaut: " + s.sha1() + " (" + s.fileCount() + " Dateien)" + (sender.enabled() && sender.currentUrl() == null ? " - ACHTUNG: pack.public-url oder pack.external-url fehlt, es wird nichts gesendet" : ""));
+            } catch (java.io.IOException | RuntimeException e) {
+                getLogger().log(java.util.logging.Level.SEVERE, "Pack konnte nicht gebaut werden", e);
+            }
+        }
     }
 
     @Override
     public void onDisable() {
+        if (web != null) web.stop();
         if (modules != null) modules.disableAll();
         getServer().getServicesManager().unregisterAll(this);
         if (channel != null) channel.unregister();
