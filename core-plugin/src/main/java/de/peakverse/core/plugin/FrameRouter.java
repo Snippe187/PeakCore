@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiConsumer;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -18,16 +19,19 @@ import java.util.logging.Logger;
  */
 final class FrameRouter<P> {
     /** Zaehlerstand fuer die Diagnose. */
-    record Stats(long received, long malformed, long unknownModule, long handlerErrors, long delivered) {}
+    record Stats(long received, long malformed, long unknownModule, long handlerErrors, long delivered, long rejected) {}
 
     private final Logger log;
     private final Map<String, BiConsumer<P, byte[]>> handlers = new ConcurrentHashMap<>();
     private volatile BiConsumer<P, byte[]> coreHandler;
+    /** Wer darf Pakete an Module schicken? Standard: jeder; der Core setzt hier "Handshake abgeschlossen". */
+    private volatile Predicate<P> moduleAccess = p -> true;
     private final AtomicLong received = new AtomicLong();
     private final AtomicLong malformed = new AtomicLong();
     private final AtomicLong unknownModule = new AtomicLong();
     private final AtomicLong handlerErrors = new AtomicLong();
     private final AtomicLong delivered = new AtomicLong();
+    private final AtomicLong rejected = new AtomicLong();
 
     FrameRouter(Logger log) {
         this.log = log;
@@ -42,7 +46,12 @@ final class FrameRouter<P> {
         handlers.remove(moduleId);
     }
 
-    /** Empfaenger der Core-Steuerpakete (Handshake, ab Phase 4). */
+    /** Pakete an Module werden nur von Spielern angenommen, fuer die dieser Test wahr ist (z. B. abgeschlossener Handshake). */
+    void setModuleAccess(Predicate<P> access) {
+        this.moduleAccess = access;
+    }
+
+    /** Empfaenger der Core-Steuerpakete (Handshake). */
     void setCoreHandler(BiConsumer<P, byte[]> handler) {
         this.coreHandler = handler;
     }
@@ -60,6 +69,10 @@ final class FrameRouter<P> {
         }
         switch (frame) {
             case Frame.ModuleFrame m -> {
+                if (!moduleAccess.test(player)) {
+                    rejected.incrementAndGet();
+                    return;
+                }
                 BiConsumer<P, byte[]> handler = handlers.get(m.moduleId());
                 if (handler == null) {
                     unknownModule.incrementAndGet();
@@ -89,6 +102,6 @@ final class FrameRouter<P> {
     }
 
     Stats stats() {
-        return new Stats(received.get(), malformed.get(), unknownModule.get(), handlerErrors.get(), delivered.get());
+        return new Stats(received.get(), malformed.get(), unknownModule.get(), handlerErrors.get(), delivered.get(), rejected.get());
     }
 }

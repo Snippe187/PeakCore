@@ -42,13 +42,13 @@ class FrameRouterTest {
         assertArrayEquals(new byte[] {1, 2, 3}, sound.get(0).payload());
         assertEquals(1, texture.size());
         assertEquals("Bob", texture.get(0).player());
-        assertEquals(new FrameRouter.Stats(2, 0, 0, 0, 2), router.stats());
+        assertEquals(new FrameRouter.Stats(2, 0, 0, 0, 2, 0), router.stats());
     }
 
     @Test
     void countsUnknownModulesAndDropsTheirPackets() {
         router.receive("Alice", up(new Frame.ModuleFrame("nobody", new byte[] {1})));
-        assertEquals(new FrameRouter.Stats(1, 0, 1, 0, 0), router.stats());
+        assertEquals(new FrameRouter.Stats(1, 0, 1, 0, 0, 0), router.stats());
     }
 
     @Test
@@ -97,6 +97,20 @@ class FrameRouterTest {
         assertEquals(List.of("B:2"), got);
         assertEquals(1, router.stats().unknownModule());
         assertEquals(1, router.stats().delivered());
+    }
+
+    @Test
+    void modulePacketsNeedTheAccessCheckButCoreFramesDoNot() {
+        List<String> modules = new ArrayList<>(), core = new ArrayList<>();
+        router.setHandler("peaksound", (p, d) -> modules.add(p));
+        router.setCoreHandler((p, d) -> core.add(p));
+        router.setModuleAccess(p -> p.equals("Alice")); // nur Alice hat den Handshake geschafft
+        router.receive("Mallory", up(new Frame.ModuleFrame("peaksound", new byte[0])));
+        router.receive("Alice", up(new Frame.ModuleFrame("peaksound", new byte[0])));
+        router.receive("Mallory", up(new Frame.CoreFrame(new byte[] {1}))); // das Hello selbst muss immer ankommen
+        assertEquals(List.of("Alice"), modules);
+        assertEquals(List.of("Mallory"), core);
+        assertEquals(1, router.stats().rejected());
     }
 
     @Test

@@ -1,10 +1,14 @@
 package de.peakverse.probe;
 
+import de.peakverse.core.api.ClientInfo;
 import de.peakverse.core.api.ModuleInfo;
 import de.peakverse.core.api.ModuleRegistration;
 import de.peakverse.core.api.ModuleRegistrationException;
 import de.peakverse.core.api.PeakCoreApi;
+import de.peakverse.core.api.event.PlayerHandshakeEvent;
 import java.nio.charset.StandardCharsets;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -16,7 +20,7 @@ import org.bukkit.plugin.java.JavaPlugin;
  * Minimales Modul als Vorlage und Test: meldet sich als "probe" an, schickt jedes empfangene Paket als Echo zurueck
  * und bietet {@code /probe} zum Ausprobieren der Ablehnungsfaelle.
  */
-public final class ProbePlugin extends JavaPlugin implements CommandExecutor {
+public final class ProbePlugin extends JavaPlugin implements CommandExecutor, Listener {
     private PeakCoreApi core;
     private ModuleRegistration registration;
 
@@ -29,6 +33,16 @@ public final class ProbePlugin extends JavaPlugin implements CommandExecutor {
             registration.send(player, payload);
         });
         getCommand("probe").setExecutor(this);
+        getServer().getPluginManager().registerEvents(this, this);
+    }
+
+    /** Nach dem Handshake einer Mod: im Log festhalten, was sie gemeldet hat, und ein "hallo" zurueckschicken. */
+    @EventHandler
+    public void onHandshake(PlayerHandshakeEvent event) {
+        ClientInfo client = event.client();
+        getLogger().info("Handshake von " + event.getPlayer().getName() + ": Mod " + client.coreVersion() + ", Module " + client.modules()
+                + ", Admin: " + core.isAdmin(event.getPlayer()));
+        registration.send(event.getPlayer(), "hallo".getBytes(StandardCharsets.UTF_8));
     }
 
     @Override

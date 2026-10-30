@@ -1,5 +1,6 @@
 package de.peakverse.core.plugin;
 
+import de.peakverse.core.api.ClientInfo;
 import de.peakverse.core.api.ModuleInfo;
 import de.peakverse.core.api.ModuleMessageHandler;
 import de.peakverse.core.api.ModuleRegistration;
@@ -12,17 +13,21 @@ import java.util.logging.Logger;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
-/** Umsetzung der oeffentlichen API; verbindet Registry und Kanal mit dem Plugin-Log. */
+/** Umsetzung der oeffentlichen API; verbindet Registry, Kanal und Handshake mit dem Plugin-Log. */
 final class CoreApiImpl implements PeakCoreApi {
     private final String coreVersion;
     private final ModuleRegistry registry;
     private final ChannelService channel;
+    private final HandshakeService<Player> handshake;
+    private final BukkitHandshakeEnv env;
     private final Logger log;
 
-    CoreApiImpl(String coreVersion, ModuleRegistry registry, ChannelService channel, Logger log) {
+    CoreApiImpl(String coreVersion, ModuleRegistry registry, ChannelService channel, HandshakeService<Player> handshake, BukkitHandshakeEnv env, Logger log) {
         this.coreVersion = coreVersion;
         this.registry = registry;
         this.channel = channel;
+        this.handshake = handshake;
+        this.env = env;
         this.log = log;
     }
 
@@ -50,6 +55,21 @@ final class CoreApiImpl implements PeakCoreApi {
         return registry.find(id).map(ModuleRegistry.Entry::info);
     }
 
+    @Override
+    public boolean isModded(Player player) {
+        return handshake.isModded(player);
+    }
+
+    @Override
+    public Optional<ClientInfo> client(Player player) {
+        return handshake.client(player);
+    }
+
+    @Override
+    public boolean isAdmin(Player player) {
+        return env.isAdmin(player);
+    }
+
     private final class Registration implements ModuleRegistration {
         private final ModuleInfo info;
         private final String owner;
@@ -57,6 +77,10 @@ final class CoreApiImpl implements PeakCoreApi {
         Registration(ModuleInfo info, String owner) {
             this.info = info;
             this.owner = owner;
+        }
+
+        private boolean stillOwner() {
+            return registry.find(info.id()).map(e -> e.owner().equals(owner)).orElse(false);
         }
 
         @Override
@@ -67,18 +91,20 @@ final class CoreApiImpl implements PeakCoreApi {
         @Override
         public void setMessageHandler(ModuleMessageHandler handler) {
             // nur solange dieses Modul noch seinem Plugin gehoert (nach unregister() ist die Registrierung wirkungslos)
-            if (!registry.find(info.id()).map(e -> e.owner().equals(owner)).orElse(false)) return;
+            if (!stillOwner()) return;
             channel.router().setHandler(info.id(), handler == null ? null : handler::onMessage);
         }
 
         @Override
         public boolean canSend(Player player) {
-            return channel.canSend(player);
+            return handshake.isModded(player) && channel.canSend(player);
         }
 
         @Override
         public boolean send(Player player, byte[] payload) {
-            if (!registry.find(info.id()).map(e -> e.owner().equals(owner)).orElse(false)) return false;
+            if (!stillOwner()) return false;
+            // nur an Spieler mit abgeschlossenem Handshake: fremde Clients sollen nichts von den Modulen sehen
+            if (!handshake.isModded(player)) return false;
             return channel.sendToModule(info.id(), player, payload);
         }
 

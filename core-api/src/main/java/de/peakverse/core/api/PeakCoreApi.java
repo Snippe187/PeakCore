@@ -3,6 +3,7 @@ package de.peakverse.core.api;
 import java.util.List;
 import java.util.Optional;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 /**
@@ -34,6 +35,18 @@ public interface PeakCoreApi {
 
     /** Ein angemeldetes Modul anhand seiner ID. */
     Optional<ModuleInfo> module(String id);
+
+    /** Hat die Mod dieses Spielers den Handshake abgeschlossen (und ist mit diesem PeakCore kompatibel)? Nur dann duerfen Module ihm Daten schicken. */
+    boolean isModded(Player player);
+
+    /** Was die Mod des Spielers beim Handshake gemeldet hat; leer, wenn sie sich nicht (kompatibel) gemeldet hat. */
+    Optional<ClientInfo> client(Player player);
+
+    /**
+     * Ist der Spieler Administrator? (Recht {@code peakcore.admin}, standardmaessig fuer Operatoren.) Wird bei jedem Aufruf neu geprueft;
+     * Module muessen Verwaltungsaktionen immer hier pruefen und sich nie auf Angaben der Mod verlassen.
+     */
+    boolean isAdmin(Player player);
 
     /** Die laufende PeakCore-API, falls PeakCore geladen ist. */
     static Optional<PeakCoreApi> get() {

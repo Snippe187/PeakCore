@@ -5,8 +5,8 @@ api-version: '26.2'
 description: "Basis fuer die PeakVerse-Module (PeakSound, TexturePeak, ...): API, Kanal zur Mod und Resource-Pack-Dienst."
 commands:
   peakcore:
-    description: Version, angemeldete Module und Kanal-Status von PeakCore
-    usage: /peakcore <version|modules|status>
+    description: Version, Module, Kanal-Status und Spieler mit Mod von PeakCore
+    usage: /peakcore <version|modules|status|players>
     permission: peakcore.admin
 permissions:
   peakcore.admin:

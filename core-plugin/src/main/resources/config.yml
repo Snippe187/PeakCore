@@ -1,0 +1,6 @@
+# PeakCore - Einstellungen
+
+# Hinweis im Chat fuer Spieler, deren Mod sich nicht gemeldet hat. Sie werden nie gekickt.
+non-mod-hint:
+  enabled: true
+  delay-ticks: 100   # 20 Ticks = 1 Sekunde; so lange wartet der Server auf die Mod, bevor er den Hinweis zeigt
