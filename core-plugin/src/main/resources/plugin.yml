@@ -1,0 +1,14 @@
+name: PeakCore
+version: '${version}'
+main: de.peakverse.core.plugin.PeakCorePlugin
+api-version: '26.2'
+description: "Basis fuer die PeakVerse-Module (PeakSound, TexturePeak, ...): API, Kanal zur Mod und Resource-Pack-Dienst."
+commands:
+  peakcore:
+    description: Version und angemeldete Module von PeakCore
+    usage: /peakcore <version|modules>
+    permission: peakcore.admin
+permissions:
+  peakcore.admin:
+    description: PeakCore-Befehle und Verwaltung
+    default: op
