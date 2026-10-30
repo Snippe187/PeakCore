@@ -61,6 +61,7 @@ final class HandshakeService<P> {
     private final Map<UUID, HelloInfo> hellos = new ConcurrentHashMap<>();
     private final Map<UUID, Integer> helloCounts = new ConcurrentHashMap<>();
     private final Set<UUID> modded = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> recognized = ConcurrentHashMap.newKeySet();
     private final Set<UUID> pendingAck = ConcurrentHashMap.newKeySet();
     private final Map<UUID, Boolean> lastAdmin = new ConcurrentHashMap<>();
     private final Map<UUID, String> lastError = new ConcurrentHashMap<>();
@@ -146,6 +147,17 @@ final class HandshakeService<P> {
         return modded.contains(env.id(player));
     }
 
+    /** Ein Modul meldet: dieser Spieler hat einen passenden Client auf anderem Weg (alte Mod). Nur fuer den Hinweis "keine Mod"; kein Handshake. */
+    void markRecognized(P player) {
+        recognized.add(env.id(player));
+    }
+
+    /** Soll dem Spieler der Hinweis "keine Mod gefunden" gezeigt werden? */
+    boolean needsNonModHint(P player) {
+        UUID id = env.id(player);
+        return !modded.contains(id) && !recognized.contains(id);
+    }
+
     Optional<ClientInfo> client(P player) {
         UUID id = env.id(player);
         if (!modded.contains(id)) return Optional.empty();
@@ -156,6 +168,7 @@ final class HandshakeService<P> {
     void onQuit(P player) {
         UUID id = env.id(player);
         modded.remove(id);
+        recognized.remove(id);
         hellos.remove(id);
         helloCounts.remove(id);
         pendingAck.remove(id);

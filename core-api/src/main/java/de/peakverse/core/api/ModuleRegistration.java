@@ -21,6 +21,13 @@ public interface ModuleRegistration {
      */
     boolean send(Player player, byte[] payload);
 
+    /**
+     * Meldet, dass dieser Spieler einen Client hat, der mit dem Modul auf anderem Weg arbeitet (z. B. die alte Mod, die noch den
+     * eigenen Kanal des Moduls nutzt, statt sich bei PeakCore zu melden). PeakCore zeigt ihm dann nicht den Hinweis "keine Mod gefunden".
+     * Gilt bis der Spieler den Server verlaesst. Die Anmeldung beim Core ersetzt das nicht: {@code isModded} bleibt falsch.
+     */
+    void markCompatibleClient(Player player);
+
     /** Groesste Nutzdatenmenge je Paket vom Server zur Mod. */
     int maxPayloadToClient();
 

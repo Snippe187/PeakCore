@@ -31,7 +31,7 @@ final class PlayerListener implements Listener {
         long delay = Math.max(1, plugin.getConfig().getLong("non-mod-hint.delay-ticks", 100));
         // Die Mod meldet sich kurz nach dem Beitritt; wer bis dahin keinen Handshake geschafft hat, bekommt den Hinweis (nie ein Kick)
         player.getScheduler().runDelayed(plugin, task -> {
-            if (!handshake.isModded(player)) player.sendMessage(CoreMessages.nonModHint(player));
+            if (handshake.needsNonModHint(player)) player.sendMessage(CoreMessages.nonModHint(player));
         }, null, delay);
     }
 

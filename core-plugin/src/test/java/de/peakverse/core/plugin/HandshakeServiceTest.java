@@ -216,6 +216,20 @@ class HandshakeServiceTest {
     }
 
     @Test
+    void theNonModHintIsSkippedForModdedAndRecognizedPlayers() {
+        env.channelRegistered.add("Alice");
+        assertTrue(service.needsNonModHint("Alice"), "unbekannter Spieler: Hinweis");
+        service.markRecognized("Alice"); // alte Mod, die einen eigenen Kanal nutzt
+        assertFalse(service.needsNonModHint("Alice"));
+        assertFalse(service.isModded("Alice"), "markieren ersetzt keinen Handshake");
+        service.onCorePayload("Bob", goodHello());
+        assertFalse(service.needsNonModHint("Bob"));
+        assertTrue(service.needsNonModHint("Carol"));
+        service.onQuit("Alice");
+        assertTrue(service.needsNonModHint("Alice"), "nach dem Austritt gilt die Markierung nicht mehr");
+    }
+
+    @Test
     void quittingForgetsEverything() {
         env.channelRegistered.add("Alice");
         service.onCorePayload("Alice", goodHello());

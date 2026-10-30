@@ -109,6 +109,12 @@ final class CoreApiImpl implements PeakCoreApi {
         }
 
         @Override
+        public void markCompatibleClient(Player player) {
+            if (!stillOwner()) return;
+            handshake.markRecognized(player);
+        }
+
+        @Override
         public int maxPayloadToClient() {
             return FrameCodec.maxModulePayload(info.id(), Direction.CLIENTBOUND);
         }
