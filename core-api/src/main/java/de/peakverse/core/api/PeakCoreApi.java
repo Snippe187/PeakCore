@@ -48,6 +48,16 @@ public interface PeakCoreApi {
      */
     boolean isAdmin(Player player);
 
+    /**
+     * Baut das Server-Resource-Pack neu (die Module liefern ihre Dateien ueber {@code contributePack}) und schickt es, falls der Versand an ist,
+     * an die Spieler; Testmodus und Varianten gelten wie bei {@code /peakcore pack rebuild}. Auf dem Haupt-Thread aufrufen.
+     *
+     * @return {@code true}, wenn gebaut wurde; bei Fehlern {@code false} (der Grund steht im Server-Log)
+     */
+    default boolean refreshPack() {
+        return false;
+    }
+
     /** Die laufende PeakCore-API, falls PeakCore geladen ist. */
     static Optional<PeakCoreApi> get() {
         return Optional.ofNullable(Bukkit.getServicesManager().load(PeakCoreApi.class));

@@ -24,3 +24,5 @@
 - Pack-Versionen (Verlauf, `/peakcore pack versions|rollback`), Testmodus (`pack test on|off|add|remove|list`, `pack publish`), Varianten standard/lite (`PackSink.optionalFile`, `pack variant`, `pack.default-variant`), verlustfreie PNG-Optimierung (`pack.optimize-png`); Zustand in `plugins/PeakCore/pack/state.json`
 
 - Phase 13: Mod laedt das Server-Pack selbst (neues Core-Paket PackOffer), Chat-Erinnerung alle 2 Minuten, Aktivierung beim naechsten Beitritt; Config pack.send.via-mod.
+
+- API: PeakCoreApi.refreshPack() baut das Pack neu und sendet es (fuer Module).

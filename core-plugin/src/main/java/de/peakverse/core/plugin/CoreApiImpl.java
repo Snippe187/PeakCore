@@ -31,6 +31,17 @@ final class CoreApiImpl implements PeakCoreApi {
         this.log = log;
     }
 
+    private volatile java.util.function.BooleanSupplier packRefresh = () -> false;
+
+    void setPackRefresh(java.util.function.BooleanSupplier refresh) {
+        this.packRefresh = refresh;
+    }
+
+    @Override
+    public boolean refreshPack() {
+        return packRefresh.getAsBoolean();
+    }
+
     @Override
     public String coreVersion() {
         return coreVersion;

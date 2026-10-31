@@ -46,3 +46,5 @@ pack:
 modules:
   peaksound:
     enabled: true
+  texturepeak:
+    enabled: true

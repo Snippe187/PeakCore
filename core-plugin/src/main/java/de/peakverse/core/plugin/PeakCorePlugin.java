@@ -78,7 +78,17 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
             }
         }, getLogger());
         getServer().getPluginManager().registerEvents(sender, this);
-        CoreCommand command = new CoreCommand(version, registry, router, handshake, modules::results, packs, sender, web);
+        api.setPackRefresh(() -> {
+            try {
+                packs.rebuild();
+                if (sender.enabled() && sender.currentUrl() != null) sender.sendAll(Bukkit.getOnlinePlayers());
+                return true;
+            } catch (java.io.IOException | RuntimeException e) {
+                getLogger().log(Level.SEVERE, "Pack konnte nicht gebaut werden", e);
+                return false;
+            }
+        });
+        CoreCommand command =new CoreCommand(version, registry, router, handshake, modules::results, packs, sender, web);
         getCommand("peakcore").setExecutor(command);
         getCommand("peakcore").setTabCompleter(command);
         getLogger().info("PeakCore " + version + " bereit (API " + PeakCoreApi.API_VERSION + ", Kanal " + Frame.CHANNEL + ").");
