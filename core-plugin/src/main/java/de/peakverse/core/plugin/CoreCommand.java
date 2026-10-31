@@ -17,7 +17,7 @@ import org.bukkit.entity.Player;
 
 /** {@code /peakcore}: Version, Module, Kanal-Status und Spieler mit Mod. Nur fuer Administratoren (Recht peakcore.admin). */
 final class CoreCommand implements CommandExecutor, TabCompleter {
-    private static final List<String> SUB = List.of("version", "modules", "status", "players", "pack");
+    private static final List<String> SUB = List.of("version", "modules", "status", "players", "pack", "web");
 
     private final String coreVersion;
     private final ModuleRegistry registry;
@@ -27,8 +27,14 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
 
     private final PackCommand packCommand;
 
+    private final java.util.function.Function<Player, String> webLink;
+    private final Supplier<String> webStatus;
+
     CoreCommand(String coreVersion, ModuleRegistry registry, FrameRouter<?> router, HandshakeService<Player> handshake,
-            Supplier<List<ModuleLoader.Result>> builtIn, PackService packs, PackSender sender, PackWebServer web) {
+            Supplier<List<ModuleLoader.Result>> builtIn, PackService packs, PackSender sender, PackWebServer web,
+            java.util.function.Function<Player, String> webLink, Supplier<String> webStatus) {
+        this.webLink = webLink;
+        this.webStatus = webStatus;
         this.packCommand = new PackCommand(packs, sender, web);
         this.coreVersion = coreVersion;
         this.registry = registry;
@@ -79,8 +85,24 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
                 }
             }
             case "pack" -> packCommand.run(sender, java.util.Arrays.copyOfRange(args, 1, args.length));
+            case "web" -> {
+                if (!(sender instanceof Player p)) {
+                    sender.sendMessage(Component.text("Nur im Spiel: der Link gehoert zu deinem Spielernamen. Web-Status: " + webStatus.get(), NamedTextColor.GRAY));
+                    break;
+                }
+                String link = webLink.apply(p);
+                if (link == null) {
+                    sender.sendMessage(Component.text("Die Web-Oberflaeche ist aus. In plugins/PeakCore/config.yml web.enabled auf true setzen und neu starten.", NamedTextColor.RED));
+                    break;
+                }
+                sender.sendMessage(Component.text("[Web-Oberflaeche oeffnen]", NamedTextColor.GREEN)
+                        .clickEvent(net.kyori.adventure.text.event.ClickEvent.openUrl(link))
+                        .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(Component.text("Einmal-Link, 5 Minuten gueltig")))
+                        .append(Component.text("  (nur fuer dich, nicht weitergeben; 5 Minuten, einmal nutzbar)", NamedTextColor.GRAY)));
+                sender.sendMessage(Component.text(webStatus.get(), NamedTextColor.DARK_GRAY));
+            }
             default -> {
-                sender.sendMessage(Component.text("Benutzung: /" + label + " <version|modules|status|players|pack>", NamedTextColor.RED));
+                sender.sendMessage(Component.text("Benutzung: /" + label + " <version|modules|status|players|pack|web>", NamedTextColor.RED));
                 return false;
             }
         }

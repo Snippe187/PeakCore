@@ -25,7 +25,15 @@ final class ModuleHost implements ModuleContext {
     private final Logger logger;
     private FileConfiguration config;
 
-    ModuleHost(JavaPlugin host, PeakModule module, String version) {
+    private final de.peakverse.core.api.web.WebRegistry web;
+
+    @Override
+    public de.peakverse.core.api.web.WebRegistry web() {
+        return web;
+    }
+
+    ModuleHost(JavaPlugin host, PeakModule module, String version, de.peakverse.core.api.web.WebRegistry web) {
+        this.web = web;
         this.host = host;
         this.id = module.id();
         this.displayName = module.displayName();

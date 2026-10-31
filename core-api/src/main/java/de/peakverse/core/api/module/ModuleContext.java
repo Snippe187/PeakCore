@@ -32,4 +32,9 @@ public interface ModuleContext {
 
     /** Laedt die Config neu von der Platte. */
     void reloadConfig();
+
+    /** Zugang zur Web-Oberflaeche des Cores; ohne eingeschaltete Oberflaeche ein Register, das nichts tut. */
+    default de.peakverse.core.api.web.WebRegistry web() {
+        return de.peakverse.core.api.web.WebRegistry.NONE;
+    }
 }

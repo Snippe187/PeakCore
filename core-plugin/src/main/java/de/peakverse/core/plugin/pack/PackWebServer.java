@@ -41,7 +41,7 @@ public final class PackWebServer {
         if (server != null) return;
         HttpServer s = HttpServer.create(new InetSocketAddress(bind, port), 16);
         s.createContext("/", this::handle);
-        executor = Executors.newFixedThreadPool(4, r -> {
+        executor = Executors.newFixedThreadPool(8, r -> {
             Thread t = new Thread(r, "PeakCore-PackWeb");
             t.setDaemon(true);
             return t;
@@ -68,7 +68,19 @@ public final class PackWebServer {
         return server == null ? port : server.getAddress().getPort();
     }
 
+    /** Alles, was nicht {@code /pack/...} ist, geht an diesen Handler (die Web-Oberflaeche); er schliesst die Verbindung selbst. */
+    public void setFallback(com.sun.net.httpserver.HttpHandler fallback) {
+        this.fallback = fallback;
+    }
+
+    private volatile com.sun.net.httpserver.HttpHandler fallback;
+
     private void handle(HttpExchange ex) throws IOException {
+        com.sun.net.httpserver.HttpHandler other = fallback;
+        if (other != null && !ex.getRequestURI().getRawPath().startsWith("/pack/")) {
+            other.handle(ex);
+            return;
+        }
         try (ex) {
             String method = ex.getRequestMethod();
             if (!method.equals("GET") && !method.equals("HEAD")) {

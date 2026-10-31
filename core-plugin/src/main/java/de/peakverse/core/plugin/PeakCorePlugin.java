@@ -6,6 +6,10 @@ import de.peakverse.core.api.module.PeakModule;
 import de.peakverse.core.plugin.pack.PackMeta;
 import de.peakverse.core.plugin.pack.PackService;
 import de.peakverse.core.plugin.pack.PackWebServer;
+import de.peakverse.core.plugin.web.AdminLog;
+import de.peakverse.core.plugin.web.LiveHub;
+import de.peakverse.core.plugin.web.WebAuth;
+import de.peakverse.core.plugin.web.WebHost;
 import de.peakverse.core.protocol.Frame;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -33,6 +37,9 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
     private PackService packs;
     private PackWebServer web;
     private PackSender sender;
+    private WebAuth webAuth;
+    private LiveHub webHub;
+    private WebHost webHost;
 
     @Override
     public void onEnable() {
@@ -55,7 +62,18 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
         // Der Admin-Status folgt /op und /deop: alle 2 Sekunden abgleichen, gemeldet wird nur bei Aenderungen
         Bukkit.getScheduler().runTaskTimer(this, () -> handshake.checkAdmins(Bukkit.getOnlinePlayers()), 40L, 40L);
 
-        modules = new ModuleLoader(findModules(), this::skipReason, m -> new ModuleHost(this, m, version), getLogger());
+        webAuth = new WebAuth(System::currentTimeMillis);
+        webHub = new LiveHub();
+        webHost = new WebHost(webAuth, new AdminLog(getDataFolder().toPath().resolve("web-log.jsonl"), System::currentTimeMillis), webHub,
+                uuid -> Bukkit.getOfflinePlayer(uuid).isOp(), new WebHost.MainThread() {
+                    @Override
+                    public <T> T call(java.util.concurrent.Callable<T> task) throws Exception {
+                        return Bukkit.getScheduler().callSyncMethod(PeakCorePlugin.this, task).get(30, java.util.concurrent.TimeUnit.SECONDS);
+                    }
+                }, webBase().startsWith("https://"), version, getLogger());
+        boolean webOn = getConfig().getBoolean("web.enabled", false);
+        modules = new ModuleLoader(findModules(), this::skipReason,
+                m -> new ModuleHost(this, m, version, webOn ? webHost.registry(m.id()) : de.peakverse.core.api.web.WebRegistry.NONE), getLogger());
         packs = new PackService(
                 () -> modules.results().stream().filter(r -> r.state() == ModuleLoader.State.ENABLED).map(ModuleLoader.Result::module).toList(),
                 getDataFolder().toPath().resolve("pack"),
@@ -88,7 +106,12 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
                 return false;
             }
         });
-        CoreCommand command =new CoreCommand(version, registry, router, handshake, modules::results, packs, sender, web);
+        CoreCommand command = new CoreCommand(version, registry, router, handshake, modules::results, packs, sender, web,
+                player -> {
+                    if (!getConfig().getBoolean("web.enabled", false)) return null;
+                    return webBase() + "/login?t=" + webAuth.issueToken(player.getUniqueId(), player.getName());
+                }, () -> webAuth.sessionCount() + " Sitzungen, " + webHub.count() + " offene Seiten");
+        if (webOn) Bukkit.getScheduler().runTaskTimerAsynchronously(this, webHub::ping, 2400L, 2400L);
         getCommand("peakcore").setExecutor(command);
         getCommand("peakcore").setTabCompleter(command);
         getLogger().info("PeakCore " + version + " bereit (API " + PeakCoreApi.API_VERSION + ", Kanal " + Frame.CHANNEL + ").");
@@ -98,7 +121,9 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
 
     /** Webserver starten und das Pack einmal bauen, wenn der Server es ausliefern oder senden soll. Fehler hier legen den Core nicht lahm. */
     private void startPack() {
-        boolean webOn = getConfig().getBoolean("pack.web.enabled", false);
+        boolean adminWeb = getConfig().getBoolean("web.enabled", false);
+        boolean webOn = getConfig().getBoolean("pack.web.enabled", false) || adminWeb;
+        if (adminWeb) web.setFallback(webHost);
         if (webOn) {
             try {
                 web.start();
@@ -117,8 +142,17 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
         }
     }
 
+    /** Adresse der Web-Oberflaeche ohne abschliessenden Schraegstrich. */
+    private String webBase() {
+        String url = getConfig().getString("web.public-url", "").trim();
+        while (url.endsWith("/")) url = url.substring(0, url.length() - 1);
+        return url.isEmpty() ? "http://localhost:" + getConfig().getInt("pack.web.port", 8123) : url;
+    }
+
     @Override
     public void onDisable() {
+        if (webHub != null) webHub.closeAll();
+        if (webAuth != null) webAuth.clear();
         if (web != null) web.stop();
         if (modules != null) modules.disableAll();
         getServer().getServicesManager().unregisterAll(this);

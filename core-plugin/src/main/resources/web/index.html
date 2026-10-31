@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PeakVerse</title>
+<link rel="icon" href="/favicon.svg">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div id="app">
+  <aside id="side">
+    <div class="brand"><span class="logo"></span><b>PeakVerse</b></div>
+    <nav id="nav"></nav>
+    <div class="side-foot">
+      <div id="who" class="who"></div>
+      <div class="tools">
+        <button id="b-lang" class="px-btn small" title="Sprache / Language">DE</button>
+        <button id="b-theme" class="px-btn small" title="Tag / Nacht">&#9790;</button>
+        <button id="b-fx" class="px-btn small" title="Effekte">FX</button>
+        <button id="b-snd" class="px-btn small" title="Sounds">&#9835;</button>
+      </div>
+      <button id="b-out" class="px-btn small ghost"></button>
+    </div>
+  </aside>
+  <main id="main"><div id="view"></div></main>
+</div>
+<div id="toasts" aria-live="polite"></div>
+<div id="modal" hidden></div>
+<script src="/app.js" type="module"></script>
+</body>
+</html>

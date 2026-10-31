@@ -41,6 +41,16 @@ pack:
     required: false       # true: wer ablehnt, wird vom Server getrennt (gilt nur fuer den Dialog)
     prompt: ""            # Text im Annahme-Dialog; leer = keiner
 
+# Web-Oberflaeche fuer Administratoren (Texturen, Pack, Protokoll). Aus, bis du sie einschaltest. Sie laeuft auf demselben Port wie der
+# Pack-Webserver (pack.web.port) und startet diesen mit. Zugang nur mit einem Einmal-Link aus dem Spiel: /peakcore web (nur Operatoren).
+# Der Link ist 5 Minuten gueltig und nur einmal einloesbar; die Sitzung dauert 8 Stunden.
+web:
+  enabled: false
+  # Adresse, unter der du die Oberflaeche im Browser erreichst, z. B. "https://play.example.com:8123". Leer = http://localhost:<port>
+  # (Der Link aus /peakcore web nutzt diese Adresse.) Ohne HTTPS laufen Passwoerter nicht, aber der Einmal-Link und das Cookie sind im Klartext
+  # sichtbar: fuer das Internet besser hinter einem HTTPS-Proxy betreiben.
+  public-url: ""
+
 # Eingebaute Module. Ein ausgeschaltetes Modul wird nicht gestartet (nach Aenderung den Server neu starten).
 # Seine Daten bleiben unberuehrt liegen.
 modules:
