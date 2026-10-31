@@ -16,6 +16,12 @@ pack:
   # Bei Konflikten gewinnt das Basis-Pack. Nur Dateien unter assets/ mit kleingeschriebenen Pfaden werden uebernommen. Leer = kein Basis-Pack.
   base-file: ""
 
+  # Welche Variante Spieler ohne eigene Einstellung bekommen: "standard" oder "lite" (ohne die als optional gemeldeten Zusatzdateien der Module,
+  # also kleiner). Pro Spieler aenderbar mit /peakcore pack variant <spieler> <variante>.
+  default-variant: standard
+  # PNG-Dateien verlustfrei verkleinern (gleiche Pixel, staerkere Kompression, ohne Text-Bloecke). Nach einem Java-Update kann sich dadurch der Pack-Hash aendern.
+  optimize-png: true
+
   # Eingebauter Webserver, von dem die Spieler das Pack laden. Aus, bis du ihn einschaltest (er oeffnet einen Port).
   # Der Port muss in der Firewall/beim Anbieter freigegeben sein (TCP), sonst kommt das Pack nicht an.
   web:

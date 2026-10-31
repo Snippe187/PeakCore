@@ -14,6 +14,15 @@ public interface PackSink {
      */
     void file(String path, byte[] data);
 
+    /**
+     * Wie {@link #file}, aber die Datei ist <b>optional</b>: Die Variante "lite" des Packs laesst sie weg (z. B. hochaufloesende Zusatztexturen,
+     * lange Klaenge). Verweist ein Modell oder eine Sound-Definition auf eine optionale Datei, muss das Modul selbst fuer einen Ersatz sorgen.
+     * Ein Sink, der Optionales nicht kennt, behandelt sie wie normale Dateien.
+     */
+    default void optionalFile(String path, byte[] data) {
+        file(path, data);
+    }
+
     /** Wie {@link #file}, aber fuer Text (UTF-8, z. B. JSON). */
     default void text(String path, String content) {
         file(path, content.getBytes(java.nio.charset.StandardCharsets.UTF_8));

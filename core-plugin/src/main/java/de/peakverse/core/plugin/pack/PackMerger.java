@@ -21,8 +21,12 @@ import java.util.TreeMap;
 public final class PackMerger {
     public static final String BASE = "base";
 
-    /** Dateien eines Moduls. */
-    public record Contribution(String owner, Map<String, byte[]> files) {}
+    /** Dateien eines Moduls; {@code optional}: die davon, die die Variante "lite" weglaesst. */
+    public record Contribution(String owner, Map<String, byte[]> files, java.util.Set<String> optional) {
+        public Contribution(String owner, Map<String, byte[]> files) {
+            this(owner, files, java.util.Set.of());
+        }
+    }
 
     /**
      * @param owner   wer das Problem hat
@@ -40,6 +44,11 @@ public final class PackMerger {
     private PackMerger() {}
 
     public static Result merge(Map<String, byte[]> base, List<Contribution> contributions) {
+        return merge(base, contributions, true);
+    }
+
+    /** @param includeOptional {@code false}: optionale Dateien der Module weglassen (Variante "lite") */
+    public static Result merge(Map<String, byte[]> base, List<Contribution> contributions, boolean includeOptional) {
         Map<String, byte[]> files = new TreeMap<>(base);
         Map<String, Set<String>> owners = new TreeMap<>();
         for (String path : files.keySet()) owners.put(path, new HashSet<>(Set.of(BASE)));
@@ -60,6 +69,7 @@ public final class PackMerger {
             for (Map.Entry<String, byte[]> e : new TreeMap<>(c.files()).entrySet()) {
                 String path = e.getKey();
                 byte[] data = e.getValue();
+                if (!includeOptional && c.optional().contains(path)) continue;
                 byte[] existing = work.get(path);
                 if (existing == null) {
                     work.put(path, data);

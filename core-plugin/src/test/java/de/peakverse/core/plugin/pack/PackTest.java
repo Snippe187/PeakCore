@@ -182,7 +182,7 @@ class PackTest {
             Files.setAttribute(dir.resolve("pack-" + last + ".zip"), "lastModifiedTime", java.nio.file.attribute.FileTime.fromMillis(1_000_000L * (n[0] + 1)));
         }
         try (var files = Files.list(dir)) {
-            assertEquals(PackService.KEEP, files.count());
+            assertEquals(PackService.KEEP, files.filter(p -> p.getFileName().toString().endsWith(".zip")).count());
         }
         assertTrue(Files.exists(dir.resolve("pack-" + last + ".zip")));
     }

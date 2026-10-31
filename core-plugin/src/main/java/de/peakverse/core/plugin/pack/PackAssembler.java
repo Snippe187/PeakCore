@@ -16,21 +16,40 @@ public final class PackAssembler {
     private final Map<String, byte[]> files = new TreeMap<>();
     private final Map<String, String> owners = new TreeMap<>();
 
+    private final java.util.Set<String> optional = new java.util.TreeSet<>();
+
     /** Der Sink eines Moduls; {@code owner} erscheint in Fehlermeldungen. */
     public PackSink sinkFor(String owner) {
-        return (path, data) -> {
-            PackPaths.validate(path);
-            if (data == null) throw new IllegalArgumentException("Keine Daten fuer " + path);
-            if (RESERVED.contains(path)) throw new IllegalArgumentException(path + " gehoert dem Core, Modul " + owner + " darf sie nicht liefern");
-            String existing = owners.get(path);
-            if (existing != null) {
-                throw new IllegalArgumentException("Pfad " + path + " liefern sowohl " + existing + " als auch " + owner);
+        return new PackSink() {
+            @Override
+            public void file(String path, byte[] data) {
+                add(owner, path, data);
             }
-            owners.put(path, owner);
-            files.put(path, data.clone());
+
+            @Override
+            public void optionalFile(String path, byte[] data) {
+                add(owner, path, data);
+                optional.add(path);
+            }
         };
     }
 
+    private void add(String owner, String path, byte[] data) {
+        PackPaths.validate(path);
+        if (data == null) throw new IllegalArgumentException("Keine Daten fuer " + path);
+        if (RESERVED.contains(path)) throw new IllegalArgumentException(path + " gehoert dem Core, Modul " + owner + " darf sie nicht liefern");
+        String existing = owners.get(path);
+        if (existing != null) {
+            throw new IllegalArgumentException("Pfad " + path + " liefern sowohl " + existing + " als auch " + owner);
+        }
+        owners.put(path, owner);
+        files.put(path, data.clone());
+    }
+
+    /** Pfade, die als optional geliefert wurden (fehlen in der Variante "lite"). */
+    public java.util.Set<String> optionalPaths() {
+        return optional;
+    }
     /** Wer den Pfad schon geliefert hat, sonst {@code null}. */
     public String ownerOf(String path) {
         return owners.get(path);

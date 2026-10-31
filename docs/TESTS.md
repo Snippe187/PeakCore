@@ -126,3 +126,20 @@ Auf dem Testserver (`pack.base-file: base-pack.zip` mit 4 Eintraegen):
 - [ ] Offen: ob Minecraft die zusammengefuehrten Item-Definitionen wie gewuenscht anzeigt (echter Client)
 - [ ] Offen: Hochladen des Basis-Packs ueber die Weboberflaeche (kommt mit dem Web-Editor); bis dahin legt man die ZIP-Datei von Hand ab
 Grenzen: Item-Definitionen werden nur fuer `select` und `range_dispatch` vereinigt (`condition`, `composite` u. a. gelten als Konflikt); Basis-Pack-Grenzen: 20 000 Dateien, 64 MB je Datei, 200 MB gesamt.
+
+## Phase 12 - Versionen, Testmodus, Varianten, PNG
+
+Automatisch (`PackVersionsTest` 18, `PngOptimizerTest` 5):
+- [x] Erster Bau macht beide Varianten live und legt Verlaufseintraege an; gleicher Inhalt bewegt keine Zeiger und legt keinen neuen Eintrag an
+- [x] Zurueckrollen setzt das Live-Pack und bleibt nach erneutem Bau mit gleichem Inhalt **und nach einem Neustart** bestehen; neuer Inhalt ersetzt es; unbekannte Nummer, falsche Variante und fehlende Datei werden abgelehnt (Live-Pack bleibt)
+- [x] Testmodus: neue Packs bekommen nur Tester, alle anderen das Live-Pack; `publish` macht das Test-Pack live; Ausschalten verwirft es; entfernte Tester bekommen das Live-Pack; Packs, die ein Zeiger braucht, werden nie aufgeraeumt
+- [x] Variante "lite" laesst optionale Dateien (`PackSink.optionalFile`) weg; ohne optionale Dateien sind beide Varianten dieselbe Datei; Spieler-Variante, Standard aus der Config, ungueltige Config faellt auf "standard"
+- [x] Zustand (`state.json`: Testmodus, Tester, Spieler-Varianten, Verlauf) ueberlebt den Neustart; eine kaputte Datei wird als `state.json.kaputt` aufgehoben
+- [x] PNG-Optimierung: gleiche Pixel (per ImageIO geprueft), Text-Bloecke entfallen, zweiter Lauf gewinnt nichts, kaputte/abgeschnittene/APNG-Dateien bleiben unveraendert; im Dienst wird die Ersparnis gemeldet und laesst sich abschalten
+
+Auf dem Testserver (Befehle per RCON):
+- [x] `pack rebuild` mit geaendertem Basis-Pack: neue Version #3 live (Nummern zaehlen ueber beide Varianten, daher fehlt #2); `versions`, `test on|off|add|list`, `variant`, `rollback standard 1` (danach [LIVE] bei #1), Fehlermeldungen bei unbekannter Nummer und falscher Eingabe
+- [ ] **Offen:** Auslieferung der unterschiedlichen Packs an echte Clients (Tester bekommt Test-Pack, Lite-Spieler Lite-Pack): hing am nicht bestaetigten Pack-Empfang aus Phase 10
+- [ ] Offen: Lite mit echten Modul-Beitraegen (PeakSound liefert keine Dateien) und PNG-Optimierung mit echten Texturen aus einem Basis-Pack: nur mit Test-PNGs geprueft
+- [ ] Offen: Spieler waehlt seine Variante selbst (kommt mit dem Mod-Menue; bis dahin stellt sie der Admin ein)
+Grenzen: PNG-Ergebnis haengt etwas von der zlib-Version der Java-Laufzeit ab (nach einem Java-Update kann der Hash wechseln); Verlauf: 50 Eintraege, Dateien: die von Zeigern benutzten plus die juengsten 5.

@@ -1,6 +1,7 @@
 package de.peakverse.core.plugin;
 
 import de.peakverse.core.plugin.pack.PackService;
+import de.peakverse.core.plugin.pack.PackState;
 import de.peakverse.core.plugin.pack.PackUrls;
 import java.util.Collection;
 import java.util.HexFormat;
@@ -42,30 +43,33 @@ final class PackSender implements Listener {
         return config().getBoolean("pack.send.enabled", false);
     }
 
-    /** Die Adresse des aktuellen Packs oder {@code null}, wenn keins gebaut oder keine Adresse eingestellt ist. */
+    /** Die Adresse eines Packs oder {@code null}, wenn keine Adresse eingestellt ist. @throws IllegalArgumentException bei ungueltiger Einstellung */
+    String urlFor(String sha1) {
+        return PackUrls.urlFor(sha1, config().getString("pack.public-url", ""), config().getString("pack.external-url", ""));
+    }
+
+    /** Die Adresse des Live-Packs der Standard-Variante (fuer die Anzeige) oder {@code null}, wenn keins gebaut oder keine Adresse eingestellt ist. */
     String currentUrl() {
-        PackService.Status s = packs.status();
-        if (s == null) return null;
-        return PackUrls.urlFor(s.sha1(), config().getString("pack.public-url", ""), config().getString("pack.external-url", ""));
+        String sha = packs.liveSha(PackState.STANDARD);
+        return sha == null ? null : urlFor(sha);
     }
 
     /** @return {@code true}, wenn das Pack an den Spieler geschickt wurde */
     boolean send(Player player) {
-        PackService.Status s = packs.status();
+        String sha = packs.shaFor(player.getUniqueId());
         String url;
         try {
-            url = currentUrl();
+            url = sha == null ? null : urlFor(sha);
         } catch (IllegalArgumentException e) {
             log.warning("Pack nicht gesendet: " + e.getMessage());
             return false;
         }
-        if (s == null || url == null) return false;
+        if (url == null) return false;
         String prompt = config().getString("pack.send.prompt", "");
-        player.setResourcePack(PACK_ID, url, HexFormat.of().parseHex(s.sha1()), prompt.isBlank() ? null : Component.text(prompt),
+        player.setResourcePack(PACK_ID, url, HexFormat.of().parseHex(sha), prompt.isBlank() ? null : Component.text(prompt),
                 config().getBoolean("pack.send.required", false));
         return true;
     }
-
     /** @return die Zahl der Spieler, denen das Pack geschickt wurde */
     int sendAll(Collection<? extends Player> players) {
         int n = 0;
