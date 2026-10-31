@@ -150,6 +150,32 @@ final class PackClient implements PackReceiver.Env {
         }
     }
 
+    private final Path pendingFile = FabricLoader.getInstance().getConfigDir().resolve("peakcore").resolve("pending-pack.txt");
+
+    @Override
+    public String pendingSha1() {
+        try {
+            String s = Files.isRegularFile(pendingFile) ? Files.readString(pendingFile).trim() : "";
+            return s.matches("[0-9a-f]{40}") ? s : null;
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    @Override
+    public void setPendingSha1(String sha1) {
+        try {
+            if (sha1 == null) {
+                Files.deleteIfExists(pendingFile);
+            } else {
+                Files.createDirectories(pendingFile.getParent());
+                Files.writeString(pendingFile, sha1);
+            }
+        } catch (IOException e) {
+            LOG.warn("Wartendes Pack konnte nicht vermerkt werden: {}", e.toString());
+        }
+    }
+
     @Override
     public String activeSha1() {
         try {

@@ -155,3 +155,11 @@ Von Hand (echter Client noetig, bisher NICHT geprueft):
 4. Neu beitreten: Pack ist in den Resource-Pack-Einstellungen als `peakverse-<sha>.zip` aktiv. `/peakcorestatus` zeigt "Pack: IDLE, aktiv <sha>".
 5. Ohne Mod beitreten: normaler Annahme-Dialog.
 6. `pack.send.via-mod: false`: auch mit Mod kommt der Dialog.
+
+### Phase 13 - Ergebnis im echten Client (31.10.2026, Dev-Client, Minecraft 26.2)
+
+Geprueft und in Ordnung: Die Mod laedt das Pack vom Webserver (SHA1 und Groesse geprueft, Datei in `config/peakcore/packs`), die Chat-Meldung und die 2-Minuten-Erinnerung erscheinen, und ein beim Start wartendes Pack wird beim naechsten Beitritt aktiviert (`resourcepacks/peakverse-<sha>.zip`, `options.txt` enthaelt `file/peakverse-...zip`, `incompatibleResourcePacks` leer, `pack.mcmeta` mit Format 88.0 wurde akzeptiert).
+
+Gefundener und behobener Fehler: Das wartende Pack wurde nur im Speicher gehalten und nach einem Neustart des Spiels nie aktiviert. Jetzt steht es in `config/peakcore/pending-pack.txt`.
+
+Nicht geprueft: ob die Texturen im Spiel sichtbar sind (der Testeintrag `rubin` wurde nicht angesehen), der Weg ueber den normalen Annahme-Dialog fuer Spieler ohne Mod.

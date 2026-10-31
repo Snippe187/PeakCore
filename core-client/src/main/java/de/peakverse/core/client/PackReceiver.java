@@ -43,6 +43,12 @@ public final class PackReceiver {
         String activeSha1();
 
         void chat(String message);
+
+        /** Das geladene, noch nicht aktivierte Pack aus einer frueheren Sitzung oder {@code null}. Ueberlebt einen Neustart des Spiels. */
+        String pendingSha1();
+
+        /** Merkt sich das wartende Pack dauerhaft ({@code null} = keins). */
+        void setPendingSha1(String sha1);
     }
 
     /** Abstand der Chat-Erinnerungen, solange ein geladenes Pack auf den Beitritt wartet. */
@@ -59,11 +65,16 @@ public final class PackReceiver {
         this.env = env;
     }
 
+    private void remember(String sha1) {
+        env.setPendingSha1(sha1);
+    }
+
     /** Das Angebot des Servers (kommt nach dem Handshake). */
     public void onOffer(CorePacket.PackOffer offer) {
         if (offer.sha1().equals(env.activeSha1()) && state != State.DOWNLOADING) {
             state = State.IDLE;
             pendingSha = null;
+            remember(null);
             return;
         }
         if (state == State.DOWNLOADING && offer.sha1().equals(pendingSha)) return; // gleiches Angebot noch einmal
@@ -89,18 +100,23 @@ public final class PackReceiver {
 
     private void becomePending() {
         state = State.PENDING;
+        remember(pendingSha);
         lastReminderAt = env.now();
         env.chat("[PeakVerse] Das Server-Resource-Pack ist geladen. Es wird aktiv, wenn du dem Server das naechste Mal beitrittst.");
     }
 
     /** Beitritt zu einem Server: ein wartendes Pack wird jetzt aktiviert. */
     public void onJoin() {
-        if (state == State.PENDING && pendingSha != null) {
-            String sha = pendingSha;
-            pendingSha = null;
-            state = State.IDLE;
-            env.activate(sha);
+        // Ein Pack aus einer frueheren Sitzung wartet nur auf der Platte: auch das wird jetzt aktiviert
+        String sha = state == State.PENDING && pendingSha != null ? pendingSha : state == State.DOWNLOADING ? null : env.pendingSha1();
+        if (sha == null || sha.equals(env.activeSha1()) || !env.isCached(sha)) {
+            if (sha != null && sha.equals(env.activeSha1())) remember(null);
+            return;
         }
+        pendingSha = null;
+        state = State.IDLE;
+        remember(null);
+        env.activate(sha);
     }
 
     /** Einmal je Client-Tick: erinnert im Chat, solange ein Pack wartet. */

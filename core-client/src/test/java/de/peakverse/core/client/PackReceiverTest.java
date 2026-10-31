@@ -23,13 +23,23 @@ class PackReceiverTest {
         final List<PackReceiver.DownloadCallback> downloads = new ArrayList<>();
         final List<String> downloadedShas = new ArrayList<>();
         String active;
+        String pending;
 
         public long now() { return now; }
         public boolean isCached(String sha1) { return cache.contains(sha1); }
-        public void download(String url, String sha1, long size, PackReceiver.DownloadCallback cb) { downloads.add(cb); downloadedShas.add(sha1); }
+        public void download(String url, String sha1, long size, PackReceiver.DownloadCallback cb) {
+            // wie die echte Umgebung: nach erfolgreichem Laden liegt die Datei im Cache
+            downloads.add(error -> {
+                if (error == null) cache.add(sha1);
+                cb.done(error);
+            });
+            downloadedShas.add(sha1);
+        }
         public void activate(String sha1) { activated.add(sha1); active = sha1; }
         public String activeSha1() { return active; }
         public void chat(String message) { chat.add(message); }
+        public String pendingSha1() { return pending; }
+        public void setPendingSha1(String sha1) { pending = sha1; }
     }
 
     private FakeEnv env;
@@ -113,6 +123,31 @@ class PackReceiverTest {
         assertTrue(env.activated.isEmpty());
         receiver.onOffer(offer(A));
         assertEquals(2, env.downloads.size());
+    }
+
+    @Test
+    void packWaitingFromAnEarlierSessionIsActivatedAtTheNextJoin() {
+        env.cache.add(A);
+        env.pending = A; // wie nach einem Neustart des Spiels: nur auf der Platte vermerkt
+        receiver.onJoin();
+        assertEquals(List.of(A), env.activated);
+        assertEquals(null, env.pending);
+    }
+
+    @Test
+    void pendingPackIsRememberedAndForgottenAfterActivation() {
+        env.cache.add(A);
+        receiver.onOffer(offer(A));
+        assertEquals(A, env.pending);
+        receiver.onJoin();
+        assertEquals(null, env.pending);
+    }
+
+    @Test
+    void rememberedPackThatIsNoLongerCachedIsNotActivated() {
+        env.pending = A;
+        receiver.onJoin();
+        assertTrue(env.activated.isEmpty());
     }
 
     @Test
