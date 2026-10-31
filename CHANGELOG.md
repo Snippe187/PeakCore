@@ -26,3 +26,10 @@
 - Phase 13: Mod laedt das Server-Pack selbst (neues Core-Paket PackOffer), Chat-Erinnerung alle 2 Minuten, Aktivierung beim naechsten Beitritt; Config pack.send.via-mod.
 
 - API: PeakCoreApi.refreshPack() baut das Pack neu und sendet es (fuer Module).
+
+- Web-Oberflaeche (`web.enabled`, Standard aus): Einmal-Link aus `/peakcore web` (auch Konsole: `peakcore web <operator>`), Sitzungen 8 h, Live-Aktualisierung, Konflikt-Warnung, Aenderungsprotokoll, DE/EN, Tag/Nacht, Effekte/Sounds abschaltbar; Modul-API `WebRegistry` (`ModuleContext.web()`)
+- Web-Seite Pack: Status, Testmodus mit Testern, Freigabe, Zurueckrollen, Basis-Pack hochladen, Dateiliste mit Vorschau
+- Web-Seite Bereiche: eigene Pack-Dateien (`plugins/PeakCore/pack-files/`) fuer Sounds, Texte, Schriften, Partikel, HUD, animierte Texturen, Modelle, Himmel, Titelbild; JSON-Pruefung, Vorlagen, Texteditor, 3D-Vorschau fuer Modelle
+- Core-Mod: Taste "PeakVerse Web-Oberflaeche oeffnen" (im Steuerungs-Menue zuweisbar, nur Operatoren)
+- Gesamt-Jar: baut die Teil-Jars jetzt immer mit (vorher konnte ein veraltetes Modul-Jar im Gesamt-Jar stecken)
+- TexturePeak (eingebaut): Texturen-Eintraege mit Archiv, Faehigkeiten (Effekte, Werte, Partikel), Web-Seite mit Pixel-Editor; `/texturepeak list|archive` mit klickbaren Eintraegen

@@ -11,7 +11,11 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.network.chat.Component;
+import org.lwjgl.glfw.GLFW;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,9 +71,15 @@ public final class PeakCoreClient implements ClientModInitializer {
             packs.onJoin();
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> session.onDisconnect());
+        // Admin-Taste (ohne Vorbelegung, im Steuerungs-Menue zuweisbar): fordert den Einmal-Link der Web-Oberflaeche an. Der Server prueft Operator-Recht selbst.
+        KeyMapping webKey = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.peakverse.web", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_UNKNOWN, KeyMapping.Category.MISC));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             session.tick();
             packs.tick();
+            while (webKey.consumeClick()) {
+                if (client.player != null && session.isAdmin()) client.player.connection.sendCommand("peakcore web");
+                else if (client.player != null) client.player.sendSystemMessage(Component.literal("[PeakVerse] Die Web-Oberflaeche ist nur fuer Operatoren auf einem Server mit PeakCore."));
+            }
         });
 
         // Diagnose: /peakcorestatus zeigt, was die Mod ueber den Server weiss
