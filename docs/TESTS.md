@@ -143,3 +143,15 @@ Auf dem Testserver (Befehle per RCON):
 - [ ] Offen: Lite mit echten Modul-Beitraegen (PeakSound liefert keine Dateien) und PNG-Optimierung mit echten Texturen aus einem Basis-Pack: nur mit Test-PNGs geprueft
 - [ ] Offen: Spieler waehlt seine Variante selbst (kommt mit dem Mod-Menue; bis dahin stellt sie der Admin ein)
 Grenzen: PNG-Ergebnis haengt etwas von der zlib-Version der Java-Laufzeit ab (nach einem Java-Update kann der Hash wechseln); Verlauf: 50 Eintraege, Dateien: die von Zeigern benutzten plus die juengsten 5.
+
+## Phase 13 - Pack-Empfang in der Mod
+
+Automatisch geprueft (Tests): Paket PackOffer (Kodierung, ungueltige Werte), Zustandslogik der Mod (laden, Cache, Erinnerung alle 2 Minuten, Aktivierung beim Beitritt, Fehler, neueres Angebot ersetzt altes).
+
+Von Hand (echter Client noetig, bisher NICHT geprueft):
+1. Server: `pack.web.enabled`, `pack.public-url`, `pack.send.enabled` an, `pack.send.via-mod: true`, Server neu starten.
+2. Mit der Mod beitreten: im Chat steht "Das Server-Resource-Pack ist geladen ...", kein Annahme-Dialog.
+3. Warten: nach 2 Minuten kommt die Erinnerung, danach alle 2 Minuten.
+4. Neu beitreten: Pack ist in den Resource-Pack-Einstellungen als `peakverse-<sha>.zip` aktiv. `/peakcorestatus` zeigt "Pack: IDLE, aktiv <sha>".
+5. Ohne Mod beitreten: normaler Annahme-Dialog.
+6. `pack.send.via-mod: false`: auch mit Mod kommt der Dialog.

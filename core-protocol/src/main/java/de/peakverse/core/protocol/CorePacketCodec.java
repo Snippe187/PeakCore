@@ -16,6 +16,7 @@ public final class CorePacketCodec {
     static final int ID_HELLO = 1;
     static final int ID_HELLO_ACK = 2;
     static final int ID_ADMIN_STATE = 3;
+    static final int ID_PACK_OFFER = 4;
 
     private CorePacketCodec() {}
 
@@ -53,6 +54,12 @@ public final class CorePacketCodec {
                 out.write(ID_ADMIN_STATE);
                 out.write(s.admin() ? 1 : 0);
             }
+            case CorePacket.PackOffer o -> {
+                out.write(ID_PACK_OFFER);
+                writeString(out, o.url(), CoreProtocol.MAX_URL_LENGTH);
+                writeString(out, o.sha1(), 40);
+                writeLong(out, o.size());
+            }
         }
         return out.toByteArray();
     }
@@ -78,6 +85,7 @@ public final class CorePacketCodec {
             CorePacket.Clientbound packet = switch (id) {
                 case ID_HELLO_ACK -> decodeHelloAck(in);
                 case ID_ADMIN_STATE -> new CorePacket.AdminState(readBoolean(in));
+                case ID_PACK_OFFER -> decodePackOffer(in);
                 default -> throw new MalformedFrameException("Unbekanntes Core-Paket vom Server: " + id);
             };
             requireFullyRead(in);
@@ -135,6 +143,17 @@ public final class CorePacketCodec {
             }
         }
         return new CorePacket.HelloAck(protocol, compatible, admin, coreVersion, apiVersion, serverTime, modules);
+    }
+
+    private static CorePacket.PackOffer decodePackOffer(ByteBuffer in) {
+        String url = readString(in, CoreProtocol.MAX_URL_LENGTH);
+        String sha1 = readString(in, 40);
+        long size = in.getLong();
+        try {
+            return new CorePacket.PackOffer(url, sha1, size);
+        } catch (IllegalArgumentException e) {
+            throw new MalformedFrameException("Ungueltiges Pack-Angebot: " + e.getMessage());
+        }
     }
 
     private static CorePacket.ModuleVersion validModuleVersion(String id, String version) {

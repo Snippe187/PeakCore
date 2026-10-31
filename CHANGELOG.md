@@ -22,3 +22,5 @@
 - Pack-Versand: eingebauter Webserver (`pack.web.*`, Standard aus), `pack.public-url` oder `pack.external-url`, Senden beim Beitritt und nach Aenderung (`pack.send.*`, Standard aus), `/peakcore pack resend`, Log der Annahme-Status
 - Pack-Merge: Basis-Pack (`pack.base-file`) plus Modul-Beitraege; zusammenfuehrbar sind Sprachdateien, sounds.json, Blockstates, Atlanten und Item-Definitionen (select, range_dispatch); Konflikte werden gemeldet (Basis gewinnt, Modul-gegen-Modul: spaeteres Modul fehlt ganz)
 - Pack-Versionen (Verlauf, `/peakcore pack versions|rollback`), Testmodus (`pack test on|off|add|remove|list`, `pack publish`), Varianten standard/lite (`PackSink.optionalFile`, `pack variant`, `pack.default-variant`), verlustfreie PNG-Optimierung (`pack.optimize-png`); Zustand in `plugins/PeakCore/pack/state.json`
+
+- Phase 13: Mod laedt das Server-Pack selbst (neues Core-Paket PackOffer), Chat-Erinnerung alle 2 Minuten, Aktivierung beim naechsten Beitritt; Config pack.send.via-mod.

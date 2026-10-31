@@ -66,7 +66,17 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
         packs.setDefaultVariant(() -> getConfig().getString("pack.default-variant", "standard"));
         packs.setOptimizePng(() -> getConfig().getBoolean("pack.optimize-png", true));
         web = new PackWebServer(getDataFolder().toPath().resolve("pack"), getConfig().getString("pack.web.bind", "0.0.0.0"), getConfig().getInt("pack.web.port", 8123), getLogger());
-        sender = new PackSender(this, packs, getLogger());
+        sender = new PackSender(this, packs, new PackSender.ModLink() {
+            @Override
+            public boolean isModded(Player player) {
+                return handshake.isModded(player);
+            }
+
+            @Override
+            public void send(Player player, de.peakverse.core.protocol.CorePacket.Clientbound packet) {
+                env.send(player, packet);
+            }
+        }, getLogger());
         getServer().getPluginManager().registerEvents(sender, this);
         CoreCommand command = new CoreCommand(version, registry, router, handshake, modules::results, packs, sender, web);
         getCommand("peakcore").setExecutor(command);

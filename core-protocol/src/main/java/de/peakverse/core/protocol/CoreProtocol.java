@@ -12,6 +12,9 @@ public final class CoreProtocol {
     public static final int MAX_MODULES = 32;
     public static final int MAX_VERSION_LENGTH = 32;
     public static final int MAX_NAME_LENGTH = 40;
+    public static final int MAX_URL_LENGTH = 400;
+    /** Groesstes Pack, das die Mod laedt (wie das Limit des Basis-Packs auf dem Server). */
+    public static final long MAX_PACK_SIZE = 200L * 1024 * 1024;
 
     private CoreProtocol() {}
 }

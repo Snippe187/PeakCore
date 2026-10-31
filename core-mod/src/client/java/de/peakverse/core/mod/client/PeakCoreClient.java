@@ -1,6 +1,7 @@
 package de.peakverse.core.mod.client;
 
 import de.peakverse.core.client.ClientSession;
+import de.peakverse.core.client.PackReceiver;
 import de.peakverse.core.mod.PeakCoreMod;
 import de.peakverse.core.mod.PeakCoreSession;
 import de.peakverse.core.mod.RawPayload;
@@ -51,18 +52,31 @@ public final class PeakCoreClient implements ClientModInitializer {
                 LOG.info("Admin-Status geaendert: {}", admin);
             }
         });
+        PackReceiver packs = new PackReceiver(new PackClient());
+        session.addListener(new ClientSession.Listener() {
+            @Override
+            public void onPackOffer(de.peakverse.core.protocol.CorePacket.PackOffer offer) {
+                packs.onOffer(offer);
+            }
+        });
         if (Boolean.getBoolean("peakcore.probe")) ProbeModule.register(session);
         ClientPlayNetworking.registerGlobalReceiver(RawPayload.TYPE,
                 (payload, context) -> context.client().execute(() -> session.onFrame(payload.data())));
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> session.onJoin());
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            session.onJoin();
+            packs.onJoin();
+        });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> session.onDisconnect());
-        ClientTickEvents.END_CLIENT_TICK.register(client -> session.tick());
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            session.tick();
+            packs.tick();
+        });
 
         // Diagnose: /peakcorestatus zeigt, was die Mod ueber den Server weiss
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
                 dispatcher.register(ClientCommands.literal("peakcorestatus").executes(context -> {
                     context.getSource().sendFeedback(Component.literal("PeakCore " + PeakCoreMod.VERSION + " (Protokoll "
-                            + de.peakverse.core.protocol.CoreProtocol.VERSION + ")\n" + session.debug()));
+                            + de.peakverse.core.protocol.CoreProtocol.VERSION + ")\n" + session.debug() + "\n" + packs.debug()));
                     return 1;
                 })));
     }

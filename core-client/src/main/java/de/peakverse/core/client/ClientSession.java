@@ -57,6 +57,9 @@ public final class ClientSession {
         default void onStateChanged(State previous, State now) {}
 
         default void onAdminChanged(boolean admin) {}
+
+        /** Der Server bietet das Server-Resource-Pack zum Laden durch die Mod an (nur nach abgeschlossenem Handshake). */
+        default void onPackOffer(CorePacket.PackOffer offer) {}
     }
 
     /** Ein Modul auf Seiten der Mod. */
@@ -243,6 +246,10 @@ public final class ClientSession {
                     admin = s.admin();
                     for (Listener l : listeners) l.onAdminChanged(admin);
                 }
+            }
+            case CorePacket.PackOffer o -> {
+                if (state != State.ACTIVE) return;
+                for (Listener l : listeners) l.onPackOffer(o);
             }
         }
     }

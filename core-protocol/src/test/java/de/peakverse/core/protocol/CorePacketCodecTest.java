@@ -51,6 +51,19 @@ class CorePacketCodecTest {
     }
 
     @Test
+    void packOfferRoundTripsAndRejectsBadValues() {
+        CorePacket.PackOffer offer = new CorePacket.PackOffer("http://localhost:8123/pack/x.zip", "ab".repeat(20), 12345);
+        assertEquals(offer, CorePacketCodec.decodeClientbound(CorePacketCodec.encode(offer)));
+        assertThrows(IllegalArgumentException.class, () -> new CorePacket.PackOffer("http://x", "XY", 1));
+        assertThrows(IllegalArgumentException.class, () -> new CorePacket.PackOffer("http://x", "ab".repeat(20), 0));
+        assertThrows(IllegalArgumentException.class, () -> new CorePacket.PackOffer("", "ab".repeat(20), 1));
+        assertThrows(MalformedFrameException.class, () -> CorePacketCodec.decodeServerbound(CorePacketCodec.encode(offer)), "nur vom Server");
+        byte[] badSha = CorePacketCodec.encode(offer);
+        badSha[badSha.length - 8 - 40] = 'Z';
+        assertThrows(MalformedFrameException.class, () -> CorePacketCodec.decodeClientbound(badSha));
+    }
+
+    @Test
     void wireFormatOfSmallPacketsIsExact() {
         assertArrayEquals(new byte[] {3, 1}, CorePacketCodec.encode(new CorePacket.AdminState(true)));
         assertArrayEquals(new byte[] {3, 0}, CorePacketCodec.encode(new CorePacket.AdminState(false)));

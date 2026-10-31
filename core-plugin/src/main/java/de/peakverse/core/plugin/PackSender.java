@@ -1,6 +1,8 @@
 package de.peakverse.core.plugin;
 
+import de.peakverse.core.api.event.PlayerHandshakeEvent;
 import de.peakverse.core.plugin.pack.PackService;
+import de.peakverse.core.protocol.CorePacket;
 import de.peakverse.core.plugin.pack.PackState;
 import de.peakverse.core.plugin.pack.PackUrls;
 import java.util.Collection;
@@ -29,10 +31,25 @@ final class PackSender implements Listener {
     private final PackService packs;
     private final Logger log;
 
-    PackSender(JavaPlugin plugin, PackService packs, Logger log) {
+    /** Zugang zu Handshake und Kanal fuer den Weg ueber die Mod. */
+    interface ModLink {
+        boolean isModded(Player player);
+
+        void send(Player player, CorePacket.Clientbound packet);
+    }
+
+    private final ModLink mod;
+
+    PackSender(JavaPlugin plugin, PackService packs, ModLink mod, Logger log) {
         this.plugin = plugin;
         this.packs = packs;
+        this.mod = mod;
         this.log = log;
+    }
+
+    /** Laedt die Mod das Pack selbst (statt Annahme-Dialog), wenn der Spieler sie hat? */
+    boolean viaMod() {
+        return config().getBoolean("pack.send.via-mod", true);
     }
 
     private FileConfiguration config() {
@@ -65,6 +82,20 @@ final class PackSender implements Listener {
             return false;
         }
         if (url == null) return false;
+        if (viaMod() && mod.isModded(player)) {
+            long size = packs.sizeOf(sha);
+            if (size <= 0) {
+                log.warning("Pack-Angebot an " + player.getName() + " nicht gesendet: Groesse von " + sha + " unbekannt");
+                return false;
+            }
+            try {
+                mod.send(player, new CorePacket.PackOffer(url, sha, size));
+            } catch (IllegalArgumentException e) {
+                log.warning("Pack-Angebot an " + player.getName() + " nicht gesendet: " + e.getMessage());
+                return false;
+            }
+            return true;
+        }
         String prompt = config().getString("pack.send.prompt", "");
         player.setResourcePack(PACK_ID, url, HexFormat.of().parseHex(sha), prompt.isBlank() ? null : Component.text(prompt),
                 config().getBoolean("pack.send.required", false));
@@ -81,10 +112,18 @@ final class PackSender implements Listener {
     public void onJoin(PlayerJoinEvent event) {
         if (!enabled()) return;
         Player p = event.getPlayer();
-        // Einen Tick warten: direkt im Beitritt ist die Verbindung noch im Aufbau
+        // Warten: direkt im Beitritt ist die Verbindung noch im Aufbau. Mit Mod-Weg etwas laenger, damit der Handshake fertig ist und
+        // Spieler mit Mod (die das Angebot schon beim Handshake bekommen) keinen Annahme-Dialog sehen
+        long wait = viaMod() ? Math.max(20L, config().getLong("non-mod-hint.delay-ticks", 100L)) : 20L;
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-            if (p.isOnline()) send(p);
-        }, 20L);
+            if (p.isOnline() && !(viaMod() && mod.isModded(p))) send(p);
+        }, wait);
+    }
+
+    /** Der Handshake mit der Mod ist fertig: das Pack als Angebot schicken. */
+    @EventHandler
+    public void onHandshake(PlayerHandshakeEvent event) {
+        if (enabled() && viaMod()) send(event.getPlayer());
     }
 
     /** Meldet, was beim Spieler mit unserem Pack passiert (angenommen, heruntergeladen, abgelehnt, fehlgeschlagen). */

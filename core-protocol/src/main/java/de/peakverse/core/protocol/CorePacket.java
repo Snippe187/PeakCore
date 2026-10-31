@@ -9,7 +9,7 @@ import java.util.List;
 public sealed interface CorePacket {
     sealed interface Serverbound extends CorePacket permits Hello {}
 
-    sealed interface Clientbound extends CorePacket permits HelloAck, AdminState {}
+    sealed interface Clientbound extends CorePacket permits HelloAck, AdminState, PackOffer {}
 
     /** Ein Modul, das die Mod des Spielers mitbringt. */
     record ModuleVersion(String id, String version) {
@@ -52,4 +52,16 @@ public sealed interface CorePacket {
 
     /** Der Admin-Status des Spielers hat sich geaendert (z. B. nach /op oder /deop). */
     record AdminState(boolean admin) implements Clientbound {}
+
+    /**
+     * Das Server-Pack zum Herunterladen durch die Mod (statt Annahme-Dialog von Minecraft): Adresse, SHA1 (40 Hex-Zeichen, klein) und Groesse in Bytes.
+     * Die Mod prueft beides nach dem Laden und nimmt nichts an, was nicht passt.
+     */
+    record PackOffer(String url, String sha1, long size) implements Clientbound {
+        public PackOffer {
+            if (url == null || url.isEmpty() || url.length() > CoreProtocol.MAX_URL_LENGTH) throw new IllegalArgumentException("Ungueltige Adresse");
+            if (sha1 == null || !sha1.matches("[0-9a-f]{40}")) throw new IllegalArgumentException("Ungueltiger SHA1");
+            if (size <= 0 || size > CoreProtocol.MAX_PACK_SIZE) throw new IllegalArgumentException("Ungueltige Groesse");
+        }
+    }
 }

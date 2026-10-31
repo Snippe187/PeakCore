@@ -35,7 +35,10 @@ pack:
   external-url: ""
   send:
     enabled: false        # Pack beim Beitritt (und nach Aenderungen) an die Spieler schicken
-    required: false       # true: wer ablehnt, wird vom Server getrennt
+    # true: Spieler mit der PeakVerse-Mod laden das Pack selbst (ohne Annahme-Dialog), bekommen alle 2 Minuten eine Chat-Erinnerung und
+    # nutzen es ab dem naechsten Beitritt. Spieler ohne Mod bekommen weiter den normalen Dialog. false: alle bekommen den Dialog.
+    via-mod: true
+    required: false       # true: wer ablehnt, wird vom Server getrennt (gilt nur fuer den Dialog)
     prompt: ""            # Text im Annahme-Dialog; leer = keiner
 
 # Eingebaute Module. Ein ausgeschaltetes Modul wird nicht gestartet (nach Aenderung den Server neu starten).

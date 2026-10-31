@@ -258,6 +258,15 @@ public final class PackService {
         return state().testMode;
     }
 
+    /** Groesse der Pack-Datei mit diesem SHA1 in Bytes oder -1, wenn sie nicht (mehr) da ist. */
+    public long sizeOf(String sha1) {
+        try {
+            return Files.size(folder.resolve("pack-" + sha1 + ".zip"));
+        } catch (IOException | RuntimeException e) {
+            return -1;
+        }
+    }
+
     public synchronized String liveSha(String variant) {
         return state().live.get(variant);
     }
