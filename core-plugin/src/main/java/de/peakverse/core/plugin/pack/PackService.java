@@ -100,6 +100,13 @@ public final class PackService {
         this.defaultVariant = defaultVariant;
     }
 
+    private Supplier<Path> customFolder = () -> null;
+
+    /** Ordner mit eigenen Dateien ({@code assets/...}), die ueber dem Basis-Pack liegen (Web-Oberflaeche: Sounds, Texte, Schriften, Partikel, HUD ...). */
+    public void setCustomFolder(Supplier<Path> customFolder) {
+        this.customFolder = customFolder;
+    }
+
     /** Ob PNG-Dateien verlustfrei verkleinert werden (aus der Config). */
     public void setOptimizePng(Supplier<Boolean> optimizePng) {
         this.optimizePng = optimizePng;
@@ -131,6 +138,12 @@ public final class PackService {
             base = loaded.files();
             icon = loaded.icon();
             for (String s : loaded.skipped()) problems.add("Basis-Pack: " + s + " nicht uebernommen");
+        }
+        Path customDir = customFolder.get();
+        if (customDir != null && Files.isDirectory(customDir)) {
+            Map<String, byte[]> merged = new TreeMap<>(base);
+            merged.putAll(PackCustom.read(customDir, problems)); // eigene Dateien aus der Web-Oberflaeche gewinnen gegen das Basis-Pack
+            base = merged;
         }
 
         List<PackMerger.Contribution> contributions = new ArrayList<>();

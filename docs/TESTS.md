@@ -176,3 +176,8 @@ Von Hand (im echten Browser gegen den Testserver geprueft am 31.10.2026):
 4. API: Faehigkeit hinzufuegen, Duplizieren, Archivieren, Zurueckholen, Testmodus an/aus, Pack neu bauen, Dateiliste. [geprueft, ueber die Schnittstelle]
 5. Noch NICHT von Hand geprueft: Stift/Radierer/Pipette mit der Maus, PNG-Import, Basis-Pack-Upload, Rollback-Knopf, zwei Admins gleichzeitig mit Konflikt-Dialog, Tag/Nacht und Sprachwechsel.
 Grenzen: Ohne HTTPS laufen Einmal-Link und Cookie im Klartext (siehe config.yml). Die OP-Pruefung der Sitzung nutzt /op (nicht das Recht peakcore.admin).
+
+## Phase 18/19: Bereiche und 3D-Vorschau
+Automatisch: PackCustomTest (Pfadpruefung, Lesen, eigene Dateien gewinnen im Bau).
+Von Hand geprueft (Browser, 31.10.2026): Upload von PNG und Modell-JSON, kaputtes JSON und Grossbuchstaben im Pfad werden abgelehnt, Dateien erscheinen im Live-Pack, Loeschen,
+3D-Vorschau eines Modells mit Texturen. Nicht geprueft: dass die Dateien im Spiel wirken (Sounds, Partikel, HUD, Himmel, Titelbild, Animation), Upload ueber die Maske mit grossen OGG-Dateien.

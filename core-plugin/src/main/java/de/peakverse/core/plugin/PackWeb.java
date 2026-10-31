@@ -6,6 +6,7 @@ import com.google.gson.JsonObject;
 import de.peakverse.core.api.web.WebRegistry;
 import de.peakverse.core.api.web.WebResponse;
 import de.peakverse.core.plugin.pack.PackBase;
+import de.peakverse.core.plugin.pack.PackCustom;
 import de.peakverse.core.plugin.pack.PackService;
 import de.peakverse.core.plugin.pack.PackState;
 import de.peakverse.core.plugin.pack.PackWebServer;
@@ -39,7 +40,10 @@ final class PackWeb {
     private final Path baseTarget;
     private final Consumer<String> setBaseFile;
 
-    PackWeb(WebRegistry web, PackService packs, PackSender sender, PackWebServer server, Path packFolder, Path baseTarget, Consumer<String> setBaseFile) {
+    private final Path customDir;
+
+    PackWeb(WebRegistry web, PackService packs, PackSender sender, PackWebServer server, Path packFolder, Path baseTarget, Path customDir, Consumer<String> setBaseFile) {
+        this.customDir = customDir;
         this.web = web;
         this.packs = packs;
         this.sender = sender;
@@ -49,16 +53,16 @@ final class PackWeb {
         this.setBaseFile = setBaseFile;
     }
 
-    void register(String script) {
+    void register(String script, WebRegistry areas, String areasScript) {
         web.panel("Pack", "Pack", script);
         web.route("status", r -> WebResponse.json(web.onMain(this::status)));
         web.route("files", r -> WebResponse.json(files(r.query().get("variant"))));
         web.route("file", r -> file(r.query().get("variant"), r.query().get("path")));
-        web.route("rebuild", r -> mutate(r.admin(), "Pack gebaut", () -> {
+        web.route("rebuild", r -> mutate(web, r.admin(), "Pack gebaut", () -> {
             PackService.Status s = packs.rebuild();
             if (s.pointersChanged() && sender.enabled() && sender.currentUrl() != null) sender.sendAll(Bukkit.getOnlinePlayers());
         }));
-        web.route("publish", r -> mutate(r.admin(), "Test-Pack veroeffentlicht", () -> {
+        web.route("publish", r -> mutate(web, r.admin(), "Test-Pack veroeffentlicht", () -> {
             packs.publish();
             if (sender.enabled() && sender.currentUrl() != null) sender.sendAll(Bukkit.getOnlinePlayers());
         }));
@@ -66,14 +70,14 @@ final class PackWeb {
             JsonObject o = GSON.fromJson(r.text(), JsonObject.class);
             String variant = o.get("variant").getAsString();
             int n = o.get("n").getAsInt();
-            return mutate(r.admin(), "Pack zurueckgerollt: " + variant + " #" + n, () -> {
+            return mutate(web, r.admin(), "Pack zurueckgerollt: " + variant + " #" + n, () -> {
                 packs.rollback(variant, n);
                 if (sender.enabled() && sender.currentUrl() != null) sender.sendAll(Bukkit.getOnlinePlayers());
             });
         });
         web.route("testmode", r -> {
             boolean on = GSON.fromJson(r.text(), JsonObject.class).get("on").getAsBoolean();
-            return mutate(r.admin(), "Testmodus " + (on ? "an" : "aus"), () -> {
+            return mutate(web, r.admin(), "Testmodus " + (on ? "an" : "aus"), () -> {
                 packs.setTestMode(on);
                 if (!on && sender.enabled() && sender.currentUrl() != null) sender.sendAll(Bukkit.getOnlinePlayers());
             });
@@ -82,7 +86,7 @@ final class PackWeb {
             JsonObject o = GSON.fromJson(r.text(), JsonObject.class);
             String name = o.get("name").getAsString();
             boolean add = o.get("add").getAsBoolean();
-            return mutate(r.admin(), "Tester " + (add ? "hinzugefuegt" : "entfernt") + ": " + name, () -> {
+            return mutate(web, r.admin(), "Tester " + (add ? "hinzugefuegt" : "entfernt") + ": " + name, () -> {
                 OfflinePlayer p = Bukkit.getPlayerExact(name) != null ? Bukkit.getPlayerExact(name) : Bukkit.getOfflinePlayerIfCached(name);
                 if (p == null) throw new IllegalArgumentException("Spieler '" + name + "' ist dem Server nicht bekannt");
                 if (add) packs.addTester(p.getUniqueId());
@@ -90,9 +94,40 @@ final class PackWeb {
                 if (p.isOnline() && sender.enabled()) sender.send(p.getPlayer());
             });
         });
+        areas.panel("Bereiche", "Areas", areasScript);
+        areas.route("custom", r -> WebResponse.json(customList()));
+        areas.route("custom/*", r -> {
+            String path = r.path().substring("custom/".length());
+            Path target = customTarget(path);
+            switch (r.method()) {
+                case "GET" -> {
+                    if (!Files.isRegularFile(target)) return WebResponse.error(404, "Datei nicht vorhanden");
+                    return WebResponse.bytes(path.endsWith(".png") ? "image/png" : path.endsWith(".ogg") ? "audio/ogg" : "application/octet-stream", Files.readAllBytes(target));
+                }
+                case "PUT" -> {
+                    checkContent(path, r.body());
+                    return mutate(areas, r.admin(), "Eigene Datei gespeichert: " + path + " (" + r.body().length + " Bytes)", () -> {
+                        Files.createDirectories(target.getParent());
+                        Files.write(target, r.body());
+                        packs.rebuild();
+                        if (sender.enabled() && sender.currentUrl() != null) sender.sendAll(Bukkit.getOnlinePlayers());
+                    });
+                }
+                case "DELETE" -> {
+                    return mutate(areas, r.admin(), "Eigene Datei geloescht: " + path, () -> {
+                        Files.deleteIfExists(target);
+                        packs.rebuild();
+                        if (sender.enabled() && sender.currentUrl() != null) sender.sendAll(Bukkit.getOnlinePlayers());
+                    });
+                }
+                default -> {
+                    return WebResponse.error(405, "GET, PUT oder DELETE");
+                }
+            }
+        });
         web.route("base", r -> {
             if (r.method().equals("DELETE")) {
-                return mutate(r.admin(), "Basis-Pack entfernt", () -> {
+                return mutate(web, r.admin(), "Basis-Pack entfernt", () -> {
                     setBaseFile.accept("");
                     Files.deleteIfExists(baseTarget);
                     packs.rebuild();
@@ -112,7 +147,7 @@ final class PackWeb {
             } finally {
                 Files.deleteIfExists(tmp);
             }
-            return mutate(r.admin(), "Basis-Pack hochgeladen (" + r.body().length + " Bytes)", () -> {
+            return mutate(web, r.admin(), "Basis-Pack hochgeladen (" + r.body().length + " Bytes)", () -> {
                 setBaseFile.accept(baseTarget.getFileName().toString());
                 packs.rebuild();
                 if (sender.enabled() && sender.currentUrl() != null) sender.sendAll(Bukkit.getOnlinePlayers());
@@ -120,18 +155,56 @@ final class PackWeb {
         });
     }
 
+    /** Zieldatei im Ordner der eigenen Dateien; nie ausserhalb davon. */
+    private Path customTarget(String path) {
+        PackCustom.checkPath(path);
+        Path target = customDir.resolve(path).normalize();
+        if (!target.startsWith(customDir.normalize())) throw new IllegalArgumentException("Ungueltiger Pfad");
+        return target;
+    }
+
+    /** Kaputtes JSON in einer Sprach-, Schrift- oder Modelldatei wuerde das Pack beim Spieler beschaedigen: schon hier abweisen. */
+    private static void checkContent(String path, byte[] data) {
+        if (data.length == 0) throw new IllegalArgumentException("Die Datei ist leer.");
+        if (data.length > PackCustom.MAX_FILE_BYTES) throw new IllegalArgumentException("Die Datei ist zu gross.");
+        if (path.endsWith(".json") || path.endsWith(".mcmeta")) {
+            try {
+                com.google.gson.JsonParser.parseString(new String(data, java.nio.charset.StandardCharsets.UTF_8));
+            } catch (RuntimeException e) {
+                throw new IllegalArgumentException("Kein gueltiges JSON: " + e.getMessage());
+            }
+        }
+        if (path.endsWith(".png") && !(data.length > 8 && data[1] == 'P' && data[2] == 'N' && data[3] == 'G')) throw new IllegalArgumentException("Keine PNG-Datei.");
+        if (path.endsWith(".ogg") && !(data.length > 4 && data[0] == 'O' && data[1] == 'g' && data[2] == 'g' && data[3] == 'S')) throw new IllegalArgumentException("Keine OGG-Datei.");
+    }
+
+    private String customList() throws IOException {
+        JsonArray list = new JsonArray();
+        if (Files.isDirectory(customDir)) {
+            try (var walk = Files.walk(customDir)) {
+                for (Path p : walk.filter(Files::isRegularFile).sorted().limit(MAX_FILES_LISTED).toList()) {
+                    JsonObject j = new JsonObject();
+                    j.addProperty("path", customDir.relativize(p).toString().replace('\\', '/'));
+                    j.addProperty("size", Files.size(p));
+                    list.add(j);
+                }
+            }
+        }
+        return GSON.toJson(list);
+    }
+
     private interface Action {
         void run() throws Exception;
     }
 
     /** Fuehrt eine Aenderung auf dem Haupt-Thread aus, protokolliert sie, meldet sie den anderen Seiten und liefert den neuen Status. */
-    private WebResponse mutate(String admin, String what, Action action) throws Exception {
-        String json = web.onMain(() -> {
+    private WebResponse mutate(WebRegistry reg, String admin, String what, Action action) throws Exception {
+        String json = reg.onMain(() -> {
             action.run();
             return status();
         });
-        web.log(admin, what);
-        web.changed("pack", admin);
+        reg.log(admin, what);
+        reg.changed("pack", admin);
         return WebResponse.json(json);
     }
 

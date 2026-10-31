@@ -87,6 +87,7 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
                         getConfig().getInt("pack.format-minor", 0)),
                 () -> getConfig().getString("pack.base-file", "").isBlank() ? null : getDataFolder().toPath().resolve(getConfig().getString("pack.base-file")),
                 getLogger());
+        packs.setCustomFolder(() -> getDataFolder().toPath().resolve("pack-files"));
         packs.setDefaultVariant(() -> getConfig().getString("pack.default-variant", "standard"));
         packs.setOptimizePng(() -> getConfig().getBoolean("pack.optimize-png", true));
         web = new PackWebServer(getDataFolder().toPath().resolve("pack"), getConfig().getString("pack.web.bind", "0.0.0.0"), getConfig().getInt("pack.web.port", 8123), getLogger());
@@ -103,11 +104,11 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
         }, getLogger());
         getServer().getPluginManager().registerEvents(sender, this);
         if (webOn) {
-            try (java.io.InputStream in = getResource("web/pack-panel.js")) {
-                new PackWeb(webHost.registry("pack"), packs, sender, web, getDataFolder().toPath().resolve("pack"), getDataFolder().toPath().resolve("base-pack.zip"), file -> {
+            try (java.io.InputStream in = getResource("web/pack-panel.js"); java.io.InputStream in2 = getResource("web/areas-panel.js")) {
+                new PackWeb(webHost.registry("pack"), packs, sender, web, getDataFolder().toPath().resolve("pack"), getDataFolder().toPath().resolve("base-pack.zip"), getDataFolder().toPath().resolve("pack-files"), file -> {
                     getConfig().set("pack.base-file", file);
                     saveConfig();
-                }).register(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+                }).register(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8), webHost.registry("areas"), new String(in2.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
             } catch (java.io.IOException | RuntimeException e) {
                 getLogger().log(Level.SEVERE, "Die Pack-Seite der Web-Oberflaeche konnte nicht angelegt werden", e);
             }
