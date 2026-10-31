@@ -20,3 +20,4 @@
 - API: `PackSink` und `PackPaths` (Pack-Beitrag eines Moduls, strenge Pfadpruefung), `PeakModule.contributePack` (optional; der Core ruft sie ab Phase 9 auf)
 - Pack-Bau: deterministisches ZIP (sortiert, fester Zeitstempel, unkomprimiert) mit stabilem SHA1, `pack.mcmeta` aus der Config, Beitraege je Modul mit Konflikt-Erkennung, Ablage in `plugins/PeakCore/pack/`, `/peakcore pack status|rebuild`
 - Pack-Versand: eingebauter Webserver (`pack.web.*`, Standard aus), `pack.public-url` oder `pack.external-url`, Senden beim Beitritt und nach Aenderung (`pack.send.*`, Standard aus), `/peakcore pack resend`, Log der Annahme-Status
+- Pack-Merge: Basis-Pack (`pack.base-file`) plus Modul-Beitraege; zusammenfuehrbar sind Sprachdateien, sounds.json, Blockstates, Atlanten und Item-Definitionen (select, range_dispatch); Konflikte werden gemeldet (Basis gewinnt, Modul-gegen-Modul: spaeteres Modul fehlt ganz)

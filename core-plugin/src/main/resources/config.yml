@@ -12,6 +12,10 @@ pack:
   format-major: 88
   format-minor: 0
 
+  # Basis-Pack: ein fertiges Resource-Pack (ZIP) als Grundlage, Pfad relativ zu plugins/PeakCore. Die Beitraege der Module werden dazugemischt.
+  # Bei Konflikten gewinnt das Basis-Pack. Nur Dateien unter assets/ mit kleingeschriebenen Pfaden werden uebernommen. Leer = kein Basis-Pack.
+  base-file: ""
+
   # Eingebauter Webserver, von dem die Spieler das Pack laden. Aus, bis du ihn einschaltest (er oeffnet einen Port).
   # Der Port muss in der Firewall/beim Anbieter freigegeben sein (TCP), sonst kommt das Pack nicht an.
   web:

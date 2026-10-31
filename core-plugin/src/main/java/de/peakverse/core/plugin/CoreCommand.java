@@ -137,7 +137,7 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
     }
 
     private static void describe(CommandSender sender, PackService.Status s) {
-        sender.sendMessage(Component.text("Pack " + s.sha1() + ": " + s.fileCount() + " Dateien (mit pack.mcmeta), " + s.size() + " Bytes, Beitraege "
+        sender.sendMessage(Component.text("Pack " + s.sha1() + ": " + s.fileCount() + " Dateien (mit pack.mcmeta), " + s.size() + " Bytes, davon " + s.baseFiles() + " aus dem Basis-Pack, " + s.mergedFiles() + " zusammengefuehrt, Beitraege "
                 + (s.filesByModule().isEmpty() ? "keine" : s.filesByModule().toString()), NamedTextColor.GOLD));
         for (String problem : s.problems()) sender.sendMessage(Component.text("  Ausgelassen: " + problem, NamedTextColor.RED));
     }

@@ -15,6 +15,7 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:${property("paper_api_version")}")
     implementation(project(":core-api"))
 
+    testImplementation("com.google.code.gson:gson:2.11.0") // zur Laufzeit liefert der Server Gson mit; hier nur fuer die Tests
     testImplementation("org.yaml:snakeyaml:2.4") // prueft, dass plugin.yml gueltiges YAML ist (ein falsch gesetzter Doppelpunkt hat Paper das Plugin ablehnen lassen)
     testImplementation(platform("org.junit:junit-bom:5.11.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")

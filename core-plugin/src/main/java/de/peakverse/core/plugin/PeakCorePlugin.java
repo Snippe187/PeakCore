@@ -61,6 +61,7 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
                 getDataFolder().toPath().resolve("pack"),
                 () -> new PackMeta(getConfig().getString("pack.description", "PeakVerse"), getConfig().getInt("pack.format-major", 88),
                         getConfig().getInt("pack.format-minor", 0)),
+                () -> getConfig().getString("pack.base-file", "").isBlank() ? null : getDataFolder().toPath().resolve(getConfig().getString("pack.base-file")),
                 getLogger());
         web = new PackWebServer(getDataFolder().toPath().resolve("pack"), getConfig().getString("pack.web.bind", "0.0.0.0"), getConfig().getInt("pack.web.port", 8123), getLogger());
         sender = new PackSender(this, packs, getLogger());

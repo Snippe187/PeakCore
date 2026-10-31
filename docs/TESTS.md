@@ -107,3 +107,22 @@ Auf dem Testserver (Webserver an, Port 8123, `public-url` localhost):
 - [ ] Offen: von aussen erreichbarer Port (Firewall/Router) und HTTPS: haengt vom echten Server ab
 
 Standard ist alles aus (`pack.web.enabled`, `pack.send.enabled` = false): keine neuen offenen Ports ohne Zutun.
+
+## Phase 11 - Merge und Konflikte
+
+Automatisch (`PackMergeTest`, 21 Tests):
+- [x] Sprachdateien und `sounds.json` werden je Schluessel vereinigt; gleicher Schluessel mit gleichem Inhalt ist kein Konflikt
+- [x] Blockstates: `variants` je Zustand vereinigt, derselbe Zustand mit anderem Modell ist ein Konflikt (Meldung nennt den Zustand); `multipart` angehaengt ohne Duplikate; `variants` gegen `multipart` ist ein Konflikt
+- [x] Atlanten: `sources` angehaengt ohne Duplikate
+- [x] Item-Definitionen: `select` (Faelle nach `when`) und `range_dispatch` (Eintraege nach `threshold`) mit gleicher Eigenschaft vereinigt, `fallback` von wem auch immer es hat; andere Eigenschaft oder anderer Typ ist ein Konflikt
+- [x] Gleiche Datei mit gleichem Inhalt ist kein Konflikt; sonstige Pfad-Kollision ist einer
+- [x] Konflikt mit dem Basis-Pack: Basis gewinnt, nur diese Datei des Moduls entfaellt; Konflikt zwischen Modulen: das nach ID spaetere Modul fehlt ganz
+- [x] Ergebnis (und Hash) haengt nicht von der Reihenfolge der Beitraege ab; kaputtes JSON ist ein Konflikt, kein Absturz
+- [x] Basis-Pack lesen: nur gueltige Pfade unter `assets/`, `pack.mcmeta` ignoriert, `pack.png` als Icon, Nicht-ZIP ist ein Fehler
+
+Auf dem Testserver (`pack.base-file: base-pack.zip` mit 4 Eintraegen):
+- [x] Pack wird aus dem Basis-Pack gebaut (2 uebernommen), der Eintrag mit Grossbuchstaben wird gemeldet und ausgelassen; `/peakcore pack status` zeigt Basis-Dateien und Zusammengefuehrte
+- [ ] **Offen:** Zusammenfuehren im laufenden Plugin. Der Server hatte keinen Modul-Beitrag, die JSON-Zusammenfuehrung (Gson aus dem Server) lief nur in den Unit-Tests, nicht live
+- [ ] Offen: ob Minecraft die zusammengefuehrten Item-Definitionen wie gewuenscht anzeigt (echter Client)
+- [ ] Offen: Hochladen des Basis-Packs ueber die Weboberflaeche (kommt mit dem Web-Editor); bis dahin legt man die ZIP-Datei von Hand ab
+Grenzen: Item-Definitionen werden nur fuer `select` und `range_dispatch` vereinigt (`condition`, `composite` u. a. gelten als Konflikt); Basis-Pack-Grenzen: 20 000 Dateien, 64 MB je Datei, 200 MB gesamt.

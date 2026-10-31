@@ -22,12 +22,17 @@ public final class PackService {
     /** Wie viele aeltere Packs im Ordner bleiben (fuers Zurueckrollen, siehe Phase 12). */
     static final int KEEP = 5;
 
-    /** Ergebnis eines Baus. {@code problems}: ausgelassene Module mit Grund. */
-    public record Status(String sha1, int size, int fileCount, Instant builtAt, boolean written, Map<String, Integer> filesByModule, List<String> problems) {}
+    /**
+     * Ergebnis eines Baus. {@code problems}: ausgelassene Module oder Dateien mit Grund; {@code baseFiles}: Dateien aus dem Basis-Pack;
+     * {@code mergedFiles}: Dateien, die aus mehreren Quellen zusammengefuehrt wurden.
+     */
+    public record Status(String sha1, int size, int fileCount, Instant builtAt, boolean written, Map<String, Integer> filesByModule, List<String> problems,
+            int baseFiles, int mergedFiles) {}
 
     private final Supplier<List<PeakModule>> runningModules;
     private final Path folder;
     private final Supplier<PackMeta> meta;
+    private final Supplier<Path> baseFile;
     private final Logger log;
     private volatile Status last;
     private volatile PackZip.Built lastBuilt;
@@ -35,18 +40,34 @@ public final class PackService {
     /**
      * @param runningModules die Module, die gerade laufen (nur deren Beitraege zaehlen)
      * @param meta           aktuelle Pack-Beschreibung und Format (aus der Config, bei jedem Bau neu gelesen)
+     * @param baseFile       das Basis-Pack (ZIP) oder {@code null}, wenn es keins gibt; die Datei wird bei jedem Bau neu gelesen
      */
-    public PackService(Supplier<List<PeakModule>> runningModules, Path folder, Supplier<PackMeta> meta, Logger log) {
+    public PackService(Supplier<List<PeakModule>> runningModules, Path folder, Supplier<PackMeta> meta, Supplier<Path> baseFile, Logger log) {
         this.runningModules = runningModules;
         this.folder = folder;
         this.meta = meta;
+        this.baseFile = baseFile;
         this.log = log;
     }
 
-    /** Baut das Pack neu. @throws IOException wenn die Datei nicht geschrieben werden kann */
+    public PackService(Supplier<List<PeakModule>> runningModules, Path folder, Supplier<PackMeta> meta, Logger log) {
+        this(runningModules, folder, meta, () -> null, log);
+    }
+
+    /** Baut das Pack neu. @throws IOException wenn das Basis-Pack nicht lesbar ist oder die Datei nicht geschrieben werden kann */
     public synchronized Status rebuild() throws IOException {
-        PackAssembler all = new PackAssembler();
+        Map<String, byte[]> base = Map.of();
+        byte[] icon = null;
         List<String> problems = new ArrayList<>();
+        Path baseZip = baseFile.get();
+        if (baseZip != null && Files.isRegularFile(baseZip)) {
+            PackBase.Loaded loaded = PackBase.load(baseZip);
+            base = loaded.files();
+            icon = loaded.icon();
+            for (String s : loaded.skipped()) problems.add("Basis-Pack: " + s + " nicht uebernommen");
+        }
+
+        List<PackMerger.Contribution> contributions = new ArrayList<>();
         for (PeakModule module : runningModules.get()) {
             PackAssembler mine = new PackAssembler();
             try {
@@ -56,24 +77,15 @@ public final class PackService {
                 log.log(Level.WARNING, "Pack-Beitrag von " + module.displayName() + " abgelehnt, das Modul fehlt im Pack", t);
                 continue;
             }
-            String clash = null;
-            for (String path : mine.files().keySet()) {
-                String other = all.ownerOf(path);
-                if (other != null) {
-                    clash = "Pfad " + path + " ist schon von " + other + " belegt";
-                    break;
-                }
-            }
-            if (clash != null) {
-                problems.add(module.id() + ": " + clash);
-                log.warning("Pack-Beitrag von " + module.displayName() + " ausgelassen: " + clash);
-                continue;
-            }
-            var sink = all.sinkFor(module.id());
-            mine.files().forEach(sink::file);
+            contributions.add(new PackMerger.Contribution(module.id(), mine.files()));
+        }
+        PackMerger.Result merged = PackMerger.merge(base, contributions);
+        for (PackMerger.Problem p : merged.problems()) {
+            problems.add(p.text());
+            log.warning("Pack: " + p.text());
         }
 
-        PackZip.Built built = PackZip.build(all.files(), meta.get(), null);
+        PackZip.Built built = PackZip.build(merged.files(), meta.get(), icon);
         Path file = folder.resolve("pack-" + built.sha1() + ".zip");
         boolean write = !Files.exists(file) || Files.size(file) != built.zip().length;
         if (write) {
@@ -85,10 +97,10 @@ public final class PackService {
         else file.toFile().setLastModified(System.currentTimeMillis()); // wieder gebrauchtes Pack zaehlt als neu, damit prune es nicht zuerst loescht
         prune(file);
         lastBuilt = built;
-        last = new Status(built.sha1(), built.zip().length, built.fileCount(), Instant.now(), write, all.countsByOwner(), List.copyOf(problems));
+        last = new Status(built.sha1(), built.zip().length, built.fileCount(), Instant.now(), write, merged.filesByOwner(), List.copyOf(problems), base.size(),
+                merged.mergedFiles());
         return last;
     }
-
     /** Das Ergebnis des letzten Baus oder {@code null}. */
     public Status status() {
         return last;
