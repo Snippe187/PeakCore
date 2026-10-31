@@ -27,12 +27,12 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
 
     private final PackCommand packCommand;
 
-    private final java.util.function.Function<Player, String> webLink;
+    private final java.util.function.Function<org.bukkit.OfflinePlayer, String> webLink;
     private final Supplier<String> webStatus;
 
     CoreCommand(String coreVersion, ModuleRegistry registry, FrameRouter<?> router, HandshakeService<Player> handshake,
             Supplier<List<ModuleLoader.Result>> builtIn, PackService packs, PackSender sender, PackWebServer web,
-            java.util.function.Function<Player, String> webLink, Supplier<String> webStatus) {
+            java.util.function.Function<org.bukkit.OfflinePlayer, String> webLink, Supplier<String> webStatus) {
         this.webLink = webLink;
         this.webStatus = webStatus;
         this.packCommand = new PackCommand(packs, sender, web);
@@ -86,15 +86,24 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
             }
             case "pack" -> packCommand.run(sender, java.util.Arrays.copyOfRange(args, 1, args.length));
             case "web" -> {
-                if (!(sender instanceof Player p)) {
-                    sender.sendMessage(Component.text("Nur im Spiel: der Link gehoert zu deinem Spielernamen. Web-Status: " + webStatus.get(), NamedTextColor.GRAY));
-                    break;
+                org.bukkit.OfflinePlayer p;
+                if (sender instanceof Player self) {
+                    p = self;
+                } else {
+                    // Die Konsole darf einen Link fuer einen Operator erzeugen (z. B. auf Servern ohne Spieler im Spiel)
+                    org.bukkit.OfflinePlayer other = args.length > 1 ? Bukkit.getOfflinePlayerIfCached(args[1]) : null;
+                    if (other == null || !other.isOp()) {
+                        sender.sendMessage(Component.text("Benutzung in der Konsole: /peakcore web <operator>  (" + webStatus.get() + ")", NamedTextColor.GRAY));
+                        break;
+                    }
+                    p = other;
                 }
                 String link = webLink.apply(p);
                 if (link == null) {
                     sender.sendMessage(Component.text("Die Web-Oberflaeche ist aus. In plugins/PeakCore/config.yml web.enabled auf true setzen und neu starten.", NamedTextColor.RED));
                     break;
                 }
+                if (!(sender instanceof Player)) sender.sendMessage(Component.text(link, NamedTextColor.AQUA));
                 sender.sendMessage(Component.text("[Web-Oberflaeche oeffnen]", NamedTextColor.GREEN)
                         .clickEvent(net.kyori.adventure.text.event.ClickEvent.openUrl(link))
                         .hoverEvent(net.kyori.adventure.text.event.HoverEvent.showText(Component.text("Einmal-Link, 5 Minuten gueltig")))

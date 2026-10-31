@@ -163,3 +163,16 @@ Geprueft und in Ordnung: Die Mod laedt das Pack vom Webserver (SHA1 und Groesse 
 Gefundener und behobener Fehler: Das wartende Pack wurde nur im Speicher gehalten und nach einem Neustart des Spiels nie aktiviert. Jetzt steht es in `config/peakcore/pending-pack.txt`.
 
 Nicht geprueft: ob die Texturen im Spiel sichtbar sind (der Testeintrag `rubin` wurde nicht angesehen), der Weg ueber den normalen Annahme-Dialog fuer Spieler ohne Mod.
+
+## Phase 16/17: Web-Oberflaeche und Pack-Manager
+
+Automatisch (WebAuthTest, WebHostTest): Einmal-Link nur einmal und 5 Minuten, Sperre nach 10 Fehlversuchen/Minute, Sitzung 8 Stunden und sofort weg nach /deop,
+API nur mit Sitzung, Aenderungen nur mit Header X-Peak, Konflikt 409 mit Revisionen (X-Force ueberschreibt), Body-Grenze 8 MB (413), Live-Meldung per SSE, Protokoll.
+
+Von Hand (im echten Browser gegen den Testserver geprueft am 31.10.2026):
+1. `web.enabled: true` in plugins/PeakCore/config.yml, Server neu starten.
+2. Im Spiel `/peakcore web` (oder in der Konsole `peakcore web <operator>`), Link oeffnen: Start-Seite, Menue Start/Pack/Texturen/Protokoll. [geprueft]
+3. Texturen: Eintrag im Pixel-Editor zeichnen (Fuellen), als neuen Eintrag anlegen: erscheint in der Liste, Datei in plugins/TexturePeak/textures, Protokoll-Zeile. [geprueft]
+4. API: Faehigkeit hinzufuegen, Duplizieren, Archivieren, Zurueckholen, Testmodus an/aus, Pack neu bauen, Dateiliste. [geprueft, ueber die Schnittstelle]
+5. Noch NICHT von Hand geprueft: Stift/Radierer/Pipette mit der Maus, PNG-Import, Basis-Pack-Upload, Rollback-Knopf, zwei Admins gleichzeitig mit Konflikt-Dialog, Tag/Nacht und Sprachwechsel.
+Grenzen: Ohne HTTPS laufen Einmal-Link und Cookie im Klartext (siehe config.yml). Die OP-Pruefung der Sitzung nutzt /op (nicht das Recht peakcore.admin).

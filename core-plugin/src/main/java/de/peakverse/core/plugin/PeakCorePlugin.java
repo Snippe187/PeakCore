@@ -68,7 +68,13 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
                 uuid -> Bukkit.getOfflinePlayer(uuid).isOp(), new WebHost.MainThread() {
                     @Override
                     public <T> T call(java.util.concurrent.Callable<T> task) throws Exception {
-                        return Bukkit.getScheduler().callSyncMethod(PeakCorePlugin.this, task).get(30, java.util.concurrent.TimeUnit.SECONDS);
+                        try {
+                            return Bukkit.getScheduler().callSyncMethod(PeakCorePlugin.this, task).get(30, java.util.concurrent.TimeUnit.SECONDS);
+                        } catch (java.util.concurrent.ExecutionException e) {
+                            // Die urspruengliche Ausnahme weitergeben, damit z. B. eine Eingabe-Pruefung als 400 ankommt und nicht als 500
+                            if (e.getCause() instanceof Exception cause) throw cause;
+                            throw e;
+                        }
                     }
                 }, webBase().startsWith("https://"), version, getLogger());
         boolean webOn = getConfig().getBoolean("web.enabled", false);
@@ -96,6 +102,16 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
             }
         }, getLogger());
         getServer().getPluginManager().registerEvents(sender, this);
+        if (webOn) {
+            try (java.io.InputStream in = getResource("web/pack-panel.js")) {
+                new PackWeb(webHost.registry("pack"), packs, sender, web, getDataFolder().toPath().resolve("pack"), getDataFolder().toPath().resolve("base-pack.zip"), file -> {
+                    getConfig().set("pack.base-file", file);
+                    saveConfig();
+                }).register(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+            } catch (java.io.IOException | RuntimeException e) {
+                getLogger().log(Level.SEVERE, "Die Pack-Seite der Web-Oberflaeche konnte nicht angelegt werden", e);
+            }
+        }
         api.setPackRefresh(() -> {
             try {
                 packs.rebuild();
@@ -109,7 +125,7 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
         CoreCommand command = new CoreCommand(version, registry, router, handshake, modules::results, packs, sender, web,
                 player -> {
                     if (!getConfig().getBoolean("web.enabled", false)) return null;
-                    return webBase() + "/login?t=" + webAuth.issueToken(player.getUniqueId(), player.getName());
+                    return webBase() + "/login?t=" + webAuth.issueToken(player.getUniqueId(), String.valueOf(player.getName()));
                 }, () -> webAuth.sessionCount() + " Sitzungen, " + webHub.count() + " offene Seiten");
         if (webOn) Bukkit.getScheduler().runTaskTimerAsynchronously(this, webHub::ping, 2400L, 2400L);
         getCommand("peakcore").setExecutor(command);
