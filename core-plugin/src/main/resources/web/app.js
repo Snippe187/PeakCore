@@ -211,12 +211,16 @@ function buildNav() {
   else crumb.replaceChildren();
 }
 
+// Jede Seite wird in einen eigenen Behaelter gebaut. Klickt man weiter, waehrend eine Seite noch laedt, schreibt die alte nur noch in einen
+// abgehaengten Behaelter und springt nicht mehr ueber die neue (Zaehler "nav").
+let nav = 0;
 async function go(id) {
+  const mine = ++nav;
   S.current = id; S.onChanged = []; parallax = [];
   location.hash = id;
   buildNav();
-  const view = $('#view');
-  view.replaceChildren();
+  const view = h('div', { class: 'page' });
+  $('#view').replaceChildren(view);
   window.scrollTo(0, 0);
   try {
     if (id === 'home') home(view);
@@ -225,18 +229,19 @@ async function go(id) {
     else if (id === 'log') await logView(view);
     else {
       const mod = await import('/m/' + id + '/panel.js?v=' + Date.now());
-      await mod.default(view, ctxFor(id));
+      if (mine !== nav) return;
+      await mod.default(view, ctxFor(id, mine));
     }
   } catch (e) {
     view.replaceChildren(h('div', { class: 'card' }, h('h1', {}, t('error')), h('p', {}, e.message)));
   }
-  reveal(view);
+  if (mine === nav) reveal(view);
 }
 
-function ctxFor(id) {
+function ctxFor(id, mine) {
   return {
     id, api: (p, o) => api('/api/' + id + '/' + p, o, id), t: tr, get lang() { return S.lang; }, me: S.me,
-    toast, confirm: confirmBox, h, beep, on: fn => S.onChanged.push(fn), saved: () => toast(t('saved'), 'good'), rev: () => S.revs[id]
+    toast, confirm: confirmBox, h, beep, on: fn => { if (mine === nav) S.onChanged.push(fn); }, saved: () => toast(t('saved'), 'good'), rev: () => S.revs[id]
   };
 }
 
