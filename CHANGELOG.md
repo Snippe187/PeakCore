@@ -1,7 +1,11 @@
 # Changelog
 
-## 0.1.0 (in Arbeit)
+## 0.1.1
 - Mod-Update: die Mods suchen beim Start im Release-Repo nach neueren `*-Mod-<Version>.jar` (mit `.sha256`), melden es beim Beitritt, `/peakcoreupdate` laedt sie, getauscht wird beim Beenden des Spiels (`ModUpdater`, `config/peakcore/mod-update.properties`)
+- Web-Oberflaeche: Klickt man weiter, waehrend eine Seite noch laedt, springt die alte nicht mehr ueber die neue zurueck
+- Lizenzfeld der Mods auf GPL-3.0-only
+
+## 0.1.0 (in Arbeit)
 - Grundgeruest: `core-api` und `core-plugin`
 - API ueber den Bukkit-ServicesManager: `PeakCoreApi`, `ModuleInfo`, `ModuleRegistration`
 - Modul-Anmeldung mit Pruefung von ID und API-Version; automatische Abmeldung beim Abschalten des Plugins
