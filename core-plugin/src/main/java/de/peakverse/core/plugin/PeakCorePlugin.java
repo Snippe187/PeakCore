@@ -12,6 +12,8 @@ import de.peakverse.core.plugin.update.UpdateWeb;
 import de.peakverse.core.plugin.pack.PackService;
 import de.peakverse.core.plugin.pack.PackWebServer;
 import de.peakverse.core.plugin.web.AdminLog;
+import de.peakverse.core.plugin.web.DeviceStore;
+import de.peakverse.core.plugin.web.PairingService;
 import de.peakverse.core.plugin.web.LiveHub;
 import de.peakverse.core.plugin.web.WebAuth;
 import de.peakverse.core.plugin.web.WebHost;
@@ -45,6 +47,8 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
     private WebAuth webAuth;
     private LiveHub webHub;
     private WebHost webHost;
+    private DeviceStore deviceStore;
+    private PairingService pairing;
     private PermStore permStore;
     private PermissionService permService;
     private UpdateService updates;
@@ -91,6 +95,35 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
                 }, webBase().startsWith("https://"), version, getLogger());
         boolean webOn = getConfig().getBoolean("web.enabled", false);
         webHost.setBindIp(getConfig().getBoolean("web.bind-session-ip", true));
+        if (webOn && getConfig().getBoolean("web.remote-login", true)) {
+            deviceStore = new DeviceStore(getDataFolder().toPath().resolve("devices.json"), System::currentTimeMillis, getLogger());
+            deviceStore.load();
+            pairing = new PairingService(System::currentTimeMillis);
+            webHost.enablePairing(deviceStore, pairing, new WebHost.PairHooks() {
+                @Override
+                public Candidate lookup(String name) {
+                    Player p = Bukkit.getPlayerExact(name);
+                    return p == null || permStore.webGrant(p.getUniqueId(), p.isOp()) == null ? null : new Candidate(p.getUniqueId(), p.getName());
+                }
+
+                @Override
+                public void ask(Candidate player, PairingService.Request request) {
+                    Player p = Bukkit.getPlayer(player.id());
+                    if (p == null) return;
+                    var red = net.kyori.adventure.text.format.NamedTextColor.RED;
+                    var gray = net.kyori.adventure.text.format.NamedTextColor.GRAY;
+                    p.sendMessage(net.kyori.adventure.text.Component.text("[PeakVerse] Ein neues Geraet will sich mit der Web-Oberflaeche verbinden.", net.kyori.adventure.text.format.NamedTextColor.GOLD));
+                    p.sendMessage(net.kyori.adventure.text.Component.text("Geraet: " + request.label() + ", Adresse " + request.ip() + ". Code: ", gray)
+                            .append(net.kyori.adventure.text.Component.text(request.code(), net.kyori.adventure.text.format.NamedTextColor.YELLOW, net.kyori.adventure.text.format.TextDecoration.BOLD)));
+                    p.sendMessage(net.kyori.adventure.text.Component.text("[Erlauben]", net.kyori.adventure.text.format.NamedTextColor.GREEN)
+                            .clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/peakweb allow " + request.code()))
+                            .append(net.kyori.adventure.text.Component.text("  "))
+                            .append(net.kyori.adventure.text.Component.text("[Ablehnen]", red).clickEvent(net.kyori.adventure.text.event.ClickEvent.runCommand("/peakweb deny"))));
+                    p.sendMessage(net.kyori.adventure.text.Component.text("Nur erlauben, wenn genau dieser Code auf deinem Handy steht. Wer es nicht war, klickt Ablehnen.", gray));
+                    p.playSound(p.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_BELL, 1f, 1.4f);
+                }
+            }, getConfig().getInt("web.device-expire-days", 0));
+        }
         if (webOn) {
             try (java.io.InputStream in = getResource("web/players-panel.js")) {
                 new PlayersWeb(webHost.registry("players"), permStore, permService, adminLog, webHost::moduleIds).register(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
@@ -150,8 +183,23 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
                 }, () -> webAuth.sessionCount() + " Sitzungen, " + webHub.count() + " offene Seiten");
         if (webOn) Bukkit.getScheduler().runTaskTimerAsynchronously(this, webHub::ping, 2400L, 2400L);
         getCommand("peakweb").setExecutor((s, c, l, a) -> {
+            if (a.length > 0 && (a[0].equalsIgnoreCase("devices") || a[0].equalsIgnoreCase("revoke"))) return deviceCommand(s, a);
             if (!(s instanceof Player p)) {
-                s.sendMessage("Nur im Spiel. In der Konsole: peakcore web <operator>");
+                s.sendMessage("Nur im Spiel. In der Konsole: peakcore web <operator>  |  peakweb devices  |  peakweb revoke <id>");
+                return true;
+            }
+            if (a.length > 0 && (a[0].equalsIgnoreCase("allow") || a[0].equalsIgnoreCase("deny"))) {
+                var green = net.kyori.adventure.text.format.NamedTextColor.GREEN;
+                if (pairing == null) {
+                    p.sendMessage(net.kyori.adventure.text.Component.text("Das Koppeln von Geraeten ist aus.", net.kyori.adventure.text.format.NamedTextColor.RED));
+                } else if (a[0].equalsIgnoreCase("deny")) {
+                    p.sendMessage(net.kyori.adventure.text.Component.text(pairing.deny(p.getUniqueId()) ? "Abgelehnt." : "Es wartet keine Anfrage.", green));
+                } else {
+                    boolean ok = a.length > 1 && pairing.approve(p.getUniqueId(), a[1]);
+                    p.sendMessage(net.kyori.adventure.text.Component.text(ok ? "Erlaubt. Das Geraet ist gleich angemeldet." : "Keine passende Anfrage (Code falsch oder abgelaufen).",
+                            ok ? green : net.kyori.adventure.text.format.NamedTextColor.RED));
+                    if (ok) getLogger().info("[Web] " + p.getName() + " hat ein Geraet gekoppelt.");
+                }
                 return true;
             }
             if (permStore.webGrant(p.getUniqueId(), p.isOp()) == null) {
@@ -201,6 +249,31 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
                 getLogger().log(java.util.logging.Level.SEVERE, "Pack konnte nicht gebaut werden", e);
             }
         }
+    }
+
+    /** {@code /peakweb devices} zeigt die gekoppelten Geraete, {@code /peakweb revoke <id>} sperrt eines. Spieler sehen nur ihre eigenen, Operatoren und die Konsole alle. */
+    private boolean deviceCommand(org.bukkit.command.CommandSender s, String[] a) {
+        var red = net.kyori.adventure.text.format.NamedTextColor.RED;
+        if (deviceStore == null) {
+            s.sendMessage(net.kyori.adventure.text.Component.text("Das Koppeln von Geraeten ist aus (web.remote-login in der config.yml).", red));
+            return true;
+        }
+        boolean all = !(s instanceof Player) || s.isOp();
+        java.util.List<DeviceStore.Device> mine = s instanceof Player p && !all ? deviceStore.listFor(p.getUniqueId()) : deviceStore.list();
+        if (a[0].equalsIgnoreCase("devices")) {
+            if (mine.isEmpty()) s.sendMessage("Keine gekoppelten Geraete.");
+            for (DeviceStore.Device d : mine) {
+                s.sendMessage(d.id + "  " + d.name + "  " + d.label + "  zuletzt " + java.time.Instant.ofEpochMilli(d.lastUsed) + "  " + d.lastIp);
+            }
+            return true;
+        }
+        if (a.length < 2) {
+            s.sendMessage("Benutzung: /peakweb revoke <id>");
+            return true;
+        }
+        boolean allowed = mine.stream().anyMatch(d -> d.id.equals(a[1]));
+        s.sendMessage(allowed && deviceStore.revoke(a[1]) ? "Geraet gesperrt." : "Kein solches Geraet (oder es gehoert dir nicht).");
+        return true;
     }
 
     /** Adresse der Web-Oberflaeche ohne abschliessenden Schraegstrich. */

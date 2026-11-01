@@ -70,6 +70,24 @@ public final class WebAuth {
         return Optional.of(s);
     }
 
+    /** Legt eine Sitzung ohne Einmal-Link an: fuer gekoppelte Geraete, die sich mit ihrem Schluessel ausweisen (der Aufrufer prueft den Schluessel). */
+    public synchronized Session createSession(UUID player, String name, String ip) {
+        purge();
+        Session s = new Session(randomId(), player, name, clock.getAsLong() + sessionTtlMs, ip);
+        sessions.put(s.id(), s);
+        return s;
+    }
+
+    /** Hat diese IP in der letzten Minute zu oft etwas Falsches probiert? */
+    public synchronized boolean isBlocked(String ip) {
+        return blocked(ip);
+    }
+
+    /** Merkt einen Fehlversuch dieser IP. */
+    public synchronized void recordFailure(String ip) {
+        failure(ip);
+    }
+
     public synchronized Optional<Session> session(String id) {
         if (id == null) return Optional.empty();
         Session s = sessions.get(id);

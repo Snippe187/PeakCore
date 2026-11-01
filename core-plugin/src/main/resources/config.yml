@@ -54,6 +54,12 @@ web:
   session-hours: 8
   # Eine Sitzung gilt nur von der IP, mit der man sich angemeldet hat. Hinter einem Proxy (alle Anfragen kommen von dessen IP) auf false stellen.
   bind-session-ip: true
+  # Geraete (z. B. das Handy) koppeln: Auf der Anmeldeseite gibt man seinen Minecraft-Namen ein, im Spiel kommt eine Nachricht mit Code zum Erlauben,
+  # danach bleibt das Geraet angemeldet (ohne neuen Link). Nur fuer Operatoren und Rollen mit Web-Zugang. Mit false ist das Koppeln aus.
+  # Wichtig: Ueber http:// (ohne Verschluesselung) kann der Schluessel im oeffentlichen WLAN mitgelesen werden. Besser hinter https (Proxy) betreiben.
+  remote-login: true
+  # Ein gekoppeltes Geraet verfaellt nach so vielen Tagen ohne Benutzung. 0 = nie (nur Sperren per Web, /peakweb revoke <id> oder wenn der Spieler kein Operator mehr ist).
+  device-expire-days: 0
 
 # Eingebaute Module. Ein ausgeschaltetes Modul wird nicht gestartet (nach Aenderung den Server neu starten).
 # Seine Daten bleiben unberuehrt liegen.

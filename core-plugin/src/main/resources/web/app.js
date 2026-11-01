@@ -18,7 +18,9 @@ const STR = {
     online: 'Gerade hier', nobody: 'nur du', noModules: 'Keine Bereiche aktiv.', time: 'Zeit', admin: 'Admin', area: 'Bereich', action: 'Aktion',
     noLog: 'Noch nichts protokolliert.', conflict: 'Konflikt', conflictText: 'Ein anderer Administrator hat inzwischen etwas geaendert', overwrite: 'Trotzdem speichern', cancel: 'Abbrechen',
     reload: 'Neu laden', needLogin: 'Nicht angemeldet', needLoginText: 'Gib im Spiel /peakcore web ein und oeffne den Link.', changedBy: 'hat etwas geaendert in', saved: 'Gespeichert',
-    error: 'Fehler', live: 'Live verbunden', offline: 'Verbindung verloren, versuche neu...', ok: 'OK', yes: 'Ja', confirmT: 'Sicher?' },
+    error: 'Fehler', live: 'Live verbunden', offline: 'Verbindung verloren, versuche neu...', ok: 'OK', yes: 'Ja', confirmT: 'Sicher?',
+    pairT: 'Vom Handy verbinden', pairText: 'Gib deinen Minecraft-Namen ein. Du musst gerade im Spiel sein: dort bekommst du eine Nachricht, die du bestätigst. Danach bleibt dieses Gerät angemeldet.', pairName: 'Minecraft-Name', pairGo: 'Verbinden', pairWait: 'Warte auf die Bestätigung im Spiel …', pairCode: 'Im Spiel muss genau dieser Code stehen:', pairDenied: 'Abgelehnt. Wenn du es warst, versuche es in einer halben Minute noch einmal.', pairExpired: 'Die Zeit ist abgelaufen. Versuche es noch einmal.', pairMany: 'Zu viele Versuche. Bitte warte eine Minute.', pairBad: 'Das ist kein gültiger Minecraft-Name.', pairOr: 'oder im Spiel /peakweb eingeben und den Link öffnen',
+    devT: 'Verbundene Geräte', devNone: 'Noch kein Gerät gekoppelt. Auf der Anmeldeseite deinen Minecraft-Namen eingeben, um ein Handy zu verbinden.', devThis: 'dieses Gerät', devLast: 'zuletzt', devBlock: 'Sperren', devBlockQ: 'Dieses Gerät sperren?', devHint: 'Gekoppelte Geräte bleiben angemeldet, bis du sie sperrst (oder der Spieler kein Operator mehr ist).' },
   en: { home: 'Home', server: 'Server', modules: 'Modules', players: 'Players', log: 'Log', logout: 'Log out', hello: 'Signed in as', welcome: 'Welcome',
     th_day: 'Day', th_night: 'Night', pickLang: 'Choose your language', ctaServer: 'Manage server', ctaModules: 'Browse modules',
     tag1: 'Draw textures everyone sees instantly.', tag2: 'Sounds, packs and abilities in one place.', tag3: 'Your server, your rules, updated live.',
@@ -35,7 +37,9 @@ const STR = {
     online: 'Here now', nobody: 'only you', noModules: 'No areas active.', time: 'Time', admin: 'Admin', area: 'Area', action: 'Action',
     noLog: 'Nothing logged yet.', conflict: 'Conflict', conflictText: 'Another administrator has changed something in the meantime', overwrite: 'Save anyway', cancel: 'Cancel',
     reload: 'Reload', needLogin: 'Not signed in', needLoginText: 'Type /peakcore web in the game and open the link.', changedBy: 'changed something in', saved: 'Saved',
-    error: 'Error', live: 'Live connected', offline: 'Connection lost, retrying...', ok: 'OK', yes: 'Yes', confirmT: 'Are you sure?' },
+    error: 'Error', live: 'Live connected', offline: 'Connection lost, retrying...', ok: 'OK', yes: 'Yes', confirmT: 'Are you sure?',
+    pairT: 'Connect from your phone', pairText: 'Enter your Minecraft name. You must be in the game right now: you get a message there that you confirm. After that this device stays signed in.', pairName: 'Minecraft name', pairGo: 'Connect', pairWait: 'Waiting for the confirmation in the game …', pairCode: 'The game must show exactly this code:', pairDenied: 'Denied. If it was you, try again in half a minute.', pairExpired: 'Time ran out. Please try again.', pairMany: 'Too many tries. Please wait a minute.', pairBad: 'That is not a valid Minecraft name.', pairOr: 'or type /peakweb in the game and open the link',
+    devT: 'Connected devices', devNone: 'No device paired yet. Enter your Minecraft name on the sign-in page to connect a phone.', devThis: 'this device', devLast: 'last used', devBlock: 'Block', devBlockQ: 'Block this device?', devHint: 'Paired devices stay signed in until you block them (or the player is no longer an operator).' },
   fr: { home: 'Accueil', server: 'Serveur', modules: 'Modules', players: 'Joueurs', log: 'Journal', logout: 'Déconnexion', hello: 'Connecté en tant que', welcome: 'Bienvenue',
     th_day: 'Jour', th_night: 'Nuit', pickLang: 'Choisis ta langue', ctaServer: 'Gérer le serveur', ctaModules: 'Voir les modules',
     tag1: 'Dessine des textures que tout le monde voit tout de suite.', tag2: 'Sons, packs et capacités au même endroit.', tag3: 'Ton serveur, tes règles, mis à jour en direct.',
@@ -133,7 +137,33 @@ async function api(path, opts = {}, moduleId = null, force = false) {
 }
 
 function needLogin() {
-  $('#app').replaceChildren(h('main', {}, h('div', { class: 'card' }, h('h1', {}, t('needLogin')), h('p', { class: 'sub' }, t('needLoginText')))));
+  const name = h('input', { placeholder: t('pairName'), autocomplete: 'username', autocapitalize: 'off', spellcheck: 'false', maxlength: 20, style: 'max-width:260px' });
+  const out = h('div', { style: 'margin-top:12px' });
+  const go = h('button', { class: 'px-btn primary', onclick: start }, t('pairGo'));
+  let timer = null;
+  const say = (...k) => out.replaceChildren(...k.flat().filter(x => x != null));
+  async function start() {
+    clearInterval(timer);
+    go.disabled = true;
+    try {
+      const res = await fetch('/pair/start', { method: 'POST', headers: { 'X-Peak': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.value.trim() }) });
+      if (res.status === 429) { say(h('p', { style: 'color:var(--bad)' }, t('pairMany'))); go.disabled = false; return; }
+      if (!res.ok) { say(h('p', { style: 'color:var(--bad)' }, t('pairBad'))); go.disabled = false; return; }
+      const d = await res.json();
+      say(h('p', { class: 'sub' }, t('pairCode')), h('div', { style: 'font-size:44px;letter-spacing:10px;font-weight:bold;margin:6px 0' }, d.code), h('p', { class: 'sub' }, t('pairWait')));
+      const until = Date.now() + d.seconds * 1000;
+      timer = setInterval(async () => {
+        try {
+          const r = await (await fetch('/pair/poll?id=' + encodeURIComponent(d.id))).json();
+          if (r.state === 'approved') { clearInterval(timer); location.reload(); }
+          else if (r.state === 'denied' || r.state === 'expired' || Date.now() > until + 3000) { clearInterval(timer); say(h('p', { style: 'color:var(--bad)' }, t(r.state === 'denied' ? 'pairDenied' : 'pairExpired'))); go.disabled = false; }
+        } catch { /* kurzer Ausfall: weiter versuchen */ }
+      }, 2000);
+    } catch { say(h('p', { style: 'color:var(--bad)' }, t('offline'))); go.disabled = false; }
+  }
+  name.addEventListener('keydown', ev => { if (ev.key === 'Enter') start(); });
+  $('#app').replaceChildren(h('main', {}, h('div', { class: 'card' }, h('h1', {}, t('needLogin')), h('p', { class: 'sub' }, t('needLoginText')),
+    h('h2', { style: 'margin-top:22px' }, t('pairT')), h('p', { class: 'sub' }, t('pairText')), h('div', { class: 'row' }, name, go), out)));
 }
 
 // ---- Module: Beschreibung und animiertes Logo ----
@@ -309,6 +339,7 @@ async function serverPage(view) {
   const chip = (txt, kind = '') => h('span', { class: 'chip ' + kind }, txt);
   const tools = S.modules.filter(m => CORE_TOOLS.includes(m.id) && m.id !== 'players');
   const upd = await updateCard();
+  const dev = await devicesCard();
   view.append(
     h('section', { class: 'srv-head reveal' },
       h('div', { class: 'rack' }, [0, 1, 2].map(i => h('div', { class: 'unit' }, h('i', { style: 'animation-delay:' + (i * .4) + 's' }), h('i', { style: 'animation-delay:' + (i * .4 + .2) + 's' }), h('em', {})))),
@@ -316,7 +347,7 @@ async function serverPage(view) {
         h('div', { class: 'chips' }, chip('PeakCore ' + S.session.version), chip(Math.max(1, S.session.online.length) + ' ' + t('statAdmins')),
           st ? [chip(t('srvPack') + ': ' + (st.serverRunning ? t('running') : t('stopped')), st.serverRunning ? 'good' : 'warn'), st.sending ? chip(t('sending'), 'good') : null, st.testMode ? chip(t('testMode'), 'warn') : null,
             (st.problems?.length) ? chip(st.problems.length + ' ' + t('problems'), 'bad') : null] : null))),
-    upd,
+    upd, dev,
     h('h2', { class: 'reveal' }, t('tools')),
     h('div', { class: 'mgrid' }, tools.map(m => modCard(m))),
     h('h2', { class: 'reveal' }, t('recent')),
@@ -355,6 +386,21 @@ async function updateCard() {
     if (!box.isConnected) { clearInterval(timer); return; }
     if (st.restartIn >= 0) { try { st = await api('/api/update/status', {}, 'update'); draw(); } catch { /* egal */ } }
   }, 2000);
+  return box;
+}
+// Gekoppelte Geraete (Handy): ansehen und sperren
+async function devicesCard() {
+  let list;
+  try { list = await api('/api/devices'); } catch { return null; }
+  const box = h('section', { class: 'card reveal' });
+  function draw() {
+    box.replaceChildren(h('div', { class: 'row' }, h('h2', { style: 'margin:0' }, t('devT')), h('span', { class: 'chip' }, list.length)),
+      list.length ? h('table', {}, list.map(d => h('tr', {}, h('td', {}, h('b', {}, d.name), d.current ? [' ', h('span', { class: 'chip good' }, t('devThis'))] : null), h('td', {}, d.label), h('td', { class: 'dim' }, d.ip),
+        h('td', { class: 'dim' }, t('devLast') + ' ' + new Date(d.lastUsed).toLocaleString(S.lang)),
+        h('td', {}, h('button', { class: 'px-btn small danger', onclick: async () => { if (!(await confirmBox(t('devBlockQ')))) return; try { await api('/api/devices/' + d.id, { method: 'DELETE' }); list = list.filter(x => x.id !== d.id); if (d.current) { needLogin(); return; } draw(); } catch (e) { toast(e.message, 'bad'); } } }, t('devBlock')))))) : h('p', { class: 'sub' }, t('devNone')),
+      h('p', { class: 'sub', style: 'margin-top:10px' }, t('devHint')));
+  }
+  draw();
   return box;
 }
 function modCard(m) {

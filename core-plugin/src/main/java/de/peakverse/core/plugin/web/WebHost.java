@@ -131,6 +131,32 @@ public final class WebHost implements HttpHandler {
         this.bindIp = bind;
     }
 
+    /** Wer sich per Koppeln anmelden darf und wie der Spieler im Spiel benachrichtigt wird (beides laeuft auf dem Haupt-Thread). */
+    public interface PairHooks {
+        /** Der Spieler mit diesem Namen, wenn er online ist und Zugang zur Web-Oberflaeche hat; sonst {@code null}. */
+        Candidate lookup(String name);
+
+        /** Fragt den Spieler im Spiel, ob er das neue Geraet erlaubt. */
+        void ask(Candidate player, PairingService.Request request);
+
+        record Candidate(UUID id, String name) { }
+    }
+
+    private static final String DEVICE_COOKIE = "peak_device";
+    private static final long DEVICE_COOKIE_SECONDS = 10L * 365 * 86_400;
+    private volatile DeviceStore devices;
+    private volatile PairingService pairing;
+    private volatile PairHooks pairHooks;
+    private volatile int deviceExpireDays;
+
+    /** Schaltet das Koppeln von Geraeten (Handy) ein. {@code expireDays}: nach so vielen Tagen ohne Benutzung verfaellt ein Geraet, 0 = nie. */
+    public void enablePairing(DeviceStore devices, PairingService pairing, PairHooks hooks, int expireDays) {
+        this.devices = devices;
+        this.pairing = pairing;
+        this.pairHooks = hooks;
+        this.deviceExpireDays = Math.max(0, expireDays);
+    }
+
     /** Kennungen aller Module mit Web-Seite (fuer die Rollen). */
     public List<String> moduleIds() {
         return modules.values().stream().filter(m -> m.script != null).map(m -> m.id).sorted().toList();
@@ -185,11 +211,16 @@ public final class WebHost implements HttpHandler {
             login(ex, query.get("t"));
             return false;
         }
+        if (path.equals("/pair/start") || path.equals("/pair/poll")) {
+            pair(ex, path, method, query);
+            return false;
+        }
         if (!path.startsWith("/api/") && !path.startsWith("/m/")) {
             send(ex, WebResponse.error(404, "Nicht gefunden"));
             return false;
         }
         WebAuth.Session session = auth.session(cookie(ex, COOKIE)).orElse(null);
+        if (session == null) session = deviceLogin(ex);
         PermStore.Grant grant = session == null ? null : access.apply(session.player());
         boolean wrongIp = session != null && bindIp && session.ip() != null && !session.ip().equals(remoteIp(ex));
         if (session == null || grant == null || wrongIp) {
@@ -221,8 +252,14 @@ public final class WebHost implements HttpHandler {
             }
             case "logout" -> {
                 auth.logout(cookie(ex, COOKIE));
+                // Abmelden heisst auch: dieses Geraet vergisst seinen Schluessel (sonst kaeme es beim naechsten Besuch von allein wieder rein)
+                String key = cookie(ex, DEVICE_COOKIE);
+                if (key != null && devices != null && key.indexOf('.') > 0) devices.revoke(key.substring(0, key.indexOf('.')));
+                ex.getResponseHeaders().add("Set-Cookie", COOKIE + "=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0");
+                ex.getResponseHeaders().add("Set-Cookie", DEVICE_COOKIE + "=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0");
                 send(ex, WebResponse.ok());
             }
+            case "devices" -> deviceList(ex, session, grant, method);
             case "events" -> {
                 if (!hub.attach(ex, session.name())) {
                     send(ex, WebResponse.error(503, "Zu viele offene Seiten"));
@@ -230,9 +267,187 @@ public final class WebHost implements HttpHandler {
                 }
                 return true;
             }
-            default -> moduleApi(ex, session, grant, method, api, query);
+            default -> {
+                if (api.startsWith("devices/")) deviceRevoke(ex, session, grant, method, api.substring("devices/".length()));
+                else moduleApi(ex, session, grant, method, api, query);
+            }
         }
         return false;
+    }
+
+    // ---- Geraete koppeln (Handy) ----
+
+    /** Meldet ein Geraet mit seinem gespeicherten Schluessel an, wenn es einen hat und der Spieler noch Zugang hat. */
+    private WebAuth.Session deviceLogin(HttpExchange ex) {
+        DeviceStore store = devices;
+        String key = cookie(ex, DEVICE_COOKIE);
+        if (store == null || key == null) return null;
+        String ip = remoteIp(ex);
+        if (auth.isBlocked(ip)) return null;
+        var found = store.authenticate(key, ip, deviceExpireDays);
+        if (found.isEmpty()) {
+            auth.recordFailure(ip);
+            return null;
+        }
+        DeviceStore.Device d = found.get();
+        UUID player;
+        try {
+            player = UUID.fromString(d.player);
+        } catch (IllegalArgumentException e) {
+            store.revoke(d.id);
+            return null;
+        }
+        if (access.apply(player) == null) {
+            // Der Spieler ist kein Operator mehr und hat keine Rolle mit Web-Zugang: alle seine Geraete sind damit gesperrt
+            store.revokeAll(player);
+            return null;
+        }
+        WebAuth.Session s = auth.createSession(player, d.name, ip);
+        ex.getResponseHeaders().add("Set-Cookie", COOKIE + "=" + s.id() + "; Path=/; HttpOnly; SameSite=Strict; Max-Age=" + auth.sessionTtlMs() / 1000 + (secureCookie ? "; Secure" : ""));
+        return s;
+    }
+
+    private static boolean validName(String n) {
+        return n != null && n.matches("[A-Za-z0-9_.]{3,20}");
+    }
+
+    /** Kurzer, harmloser Name fuer das Geraet aus dem User-Agent, z. B. "Android, Chrome". */
+    static String deviceLabel(String ua) {
+        if (ua == null) return "Unbekanntes Geraet";
+        String os = ua.contains("iPhone") ? "iPhone" : ua.contains("iPad") ? "iPad" : ua.contains("Android") ? "Android" : ua.contains("Windows") ? "Windows"
+                : ua.contains("Mac OS") ? "Mac" : ua.contains("Linux") ? "Linux" : "Geraet";
+        String browser = ua.contains("Edg/") ? "Edge" : ua.contains("OPR/") || ua.contains("Opera") ? "Opera" : ua.contains("Firefox/") ? "Firefox"
+                : ua.contains("Chrome/") || ua.contains("CriOS") ? "Chrome" : ua.contains("Safari/") ? "Safari" : "";
+        return browser.isEmpty() ? os : os + ", " + browser;
+    }
+
+    private void pair(HttpExchange ex, String path, String method, Map<String, String> query) throws IOException {
+        PairingService service = pairing;
+        PairHooks hooks = pairHooks;
+        if (service == null || hooks == null || devices == null) {
+            send(ex, WebResponse.error(404, "Koppeln ist aus"));
+            return;
+        }
+        String ip = remoteIp(ex);
+        if (path.equals("/pair/start")) {
+            if (!method.equals("POST") || !"1".equals(ex.getRequestHeaders().getFirst("X-Peak"))) {
+                send(ex, WebResponse.error(403, "Nur POST mit Header X-Peak"));
+                return;
+            }
+            String name;
+            try {
+                JsonObject body = GSON.fromJson(new String(readBody(ex.getRequestBody()), StandardCharsets.UTF_8), JsonObject.class);
+                name = body != null && body.has("name") ? body.get("name").getAsString().trim() : "";
+            } catch (RuntimeException e) {
+                name = "";
+            }
+            if (!validName(name)) {
+                send(ex, WebResponse.error(400, "Das ist kein gueltiger Minecraft-Name."));
+                return;
+            }
+            String label = deviceLabel(ex.getRequestHeaders().getFirst("User-Agent"));
+            final String playerName = name;
+            PairHooks.Candidate who;
+            try {
+                who = main.call(() -> hooks.lookup(playerName));
+            } catch (Exception e) {
+                logger.log(Level.WARNING, "Koppeln: Spieler-Suche fehlgeschlagen", e);
+                send(ex, WebResponse.error(500, "Interner Fehler"));
+                return;
+            }
+            // Antwort immer gleich, auch wenn es den Spieler nicht gibt oder er keinen Zugang hat: so kann niemand Namen durchprobieren
+            PairingService.Request r = who == null ? null : service.start(who.id(), who.name(), ip, label);
+            if (r == null) r = service.start(UUID.randomUUID(), playerName, ip, label);
+            if (r == null) {
+                send(ex, WebResponse.error(429, "Zu viele Versuche. Bitte warte eine Minute."));
+                return;
+            }
+            if (who != null && r.player().equals(who.id())) {
+                final PairingService.Request real = r;
+                final PairHooks.Candidate target = who;
+                try {
+                    main.call(() -> {
+                        hooks.ask(target, real);
+                        return null;
+                    });
+                } catch (Exception e) {
+                    logger.log(Level.WARNING, "Koppeln: Nachricht an den Spieler fehlgeschlagen", e);
+                }
+                writeLog(who.name(), "core", "Geraet will sich koppeln (" + label + ", " + ip + ")");
+            }
+            JsonObject o = new JsonObject();
+            o.addProperty("id", r.id());
+            o.addProperty("code", r.code());
+            o.addProperty("seconds", PairingService.TTL_MS / 1000);
+            send(ex, WebResponse.json(GSON.toJson(o)));
+            return;
+        }
+        // /pair/poll?id=...
+        String id = query.get("id");
+        if (id == null || id.length() > 64 || auth.isBlocked(ip)) {
+            send(ex, WebResponse.error(429, "Zu viele Anfragen"));
+            return;
+        }
+        PairingService.State state = service.poll(id);
+        JsonObject o = new JsonObject();
+        if (state == PairingService.State.APPROVED) {
+            PairingService.Request r = service.claim(id);
+            if (r == null) {
+                state = PairingService.State.EXPIRED;
+            } else {
+                String key = devices.issue(r.player(), r.name(), ip, r.label());
+                WebAuth.Session s = auth.createSession(r.player(), r.name(), ip);
+                ex.getResponseHeaders().add("Set-Cookie", DEVICE_COOKIE + "=" + key + "; Path=/; HttpOnly; SameSite=Strict; Max-Age=" + DEVICE_COOKIE_SECONDS + (secureCookie ? "; Secure" : ""));
+                ex.getResponseHeaders().add("Set-Cookie", COOKIE + "=" + s.id() + "; Path=/; HttpOnly; SameSite=Strict; Max-Age=" + auth.sessionTtlMs() / 1000 + (secureCookie ? "; Secure" : ""));
+                writeLog(r.name(), "core", "Geraet gekoppelt (" + r.label() + ", " + ip + ")");
+            }
+        } else if (state == PairingService.State.EXPIRED) {
+            auth.recordFailure(ip);
+        }
+        o.addProperty("state", state.name().toLowerCase());
+        send(ex, WebResponse.json(GSON.toJson(o)));
+    }
+
+    private void deviceList(HttpExchange ex, WebAuth.Session session, PermStore.Grant grant, String method) throws IOException {
+        DeviceStore store = devices;
+        if (store == null || !method.equals("GET")) {
+            send(ex, WebResponse.error(store == null ? 404 : 405, store == null ? "Koppeln ist aus" : "GET"));
+            return;
+        }
+        String key = cookie(ex, DEVICE_COOKIE);
+        String currentId = key != null && key.indexOf('.') > 0 ? key.substring(0, key.indexOf('.')) : "";
+        JsonArray a = new JsonArray();
+        for (DeviceStore.Device d : grant.all() ? store.list() : store.listFor(session.player())) {
+            JsonObject j = new JsonObject();
+            j.addProperty("id", d.id);
+            j.addProperty("name", d.name);
+            j.addProperty("label", d.label);
+            j.addProperty("ip", d.lastIp);
+            j.addProperty("created", d.created);
+            j.addProperty("lastUsed", d.lastUsed);
+            j.addProperty("current", d.id.equals(currentId));
+            a.add(j);
+        }
+        send(ex, WebResponse.json(GSON.toJson(a)));
+    }
+
+    private void deviceRevoke(HttpExchange ex, WebAuth.Session session, PermStore.Grant grant, String method, String id) throws IOException {
+        DeviceStore store = devices;
+        if (store == null || !method.equals("DELETE")) {
+            send(ex, WebResponse.error(store == null ? 404 : 405, store == null ? "Koppeln ist aus" : "DELETE"));
+            return;
+        }
+        boolean mine = store.listFor(session.player()).stream().anyMatch(d -> d.id.equals(id));
+        if (!mine && !grant.all()) {
+            send(ex, WebResponse.error(403, "Das ist nicht dein Geraet."));
+            return;
+        }
+        if (!store.revoke(id)) {
+            send(ex, WebResponse.error(404, "Unbekanntes Geraet"));
+            return;
+        }
+        writeLog(session.name(), "core", "Geraet gesperrt (" + id + ")");
+        send(ex, WebResponse.ok());
     }
 
     private void moduleApi(HttpExchange ex, WebAuth.Session session, PermStore.Grant grant, String method, String api, Map<String, String> query) throws IOException {
