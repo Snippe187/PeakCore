@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.1.0 (in Arbeit)
+- Mod-Update: die Mods suchen beim Start im Release-Repo nach neueren `*-Mod-<Version>.jar` (mit `.sha256`), melden es beim Beitritt, `/peakcoreupdate` laedt sie, getauscht wird beim Beenden des Spiels (`ModUpdater`, `config/peakcore/mod-update.properties`)
 - Grundgeruest: `core-api` und `core-plugin`
 - API ueber den Bukkit-ServicesManager: `PeakCoreApi`, `ModuleInfo`, `ModuleRegistration`
 - Modul-Anmeldung mit Pruefung von ID und API-Version; automatische Abmeldung beim Abschalten des Plugins

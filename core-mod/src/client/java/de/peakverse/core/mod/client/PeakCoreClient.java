@@ -66,9 +66,12 @@ public final class PeakCoreClient implements ClientModInitializer {
         if (Boolean.getBoolean("peakcore.probe")) ProbeModule.register(session);
         ClientPlayNetworking.registerGlobalReceiver(RawPayload.TYPE,
                 (payload, context) -> context.client().execute(() -> session.onFrame(payload.data())));
+        ModUpdateClient modUpdate = new ModUpdateClient();
+        modUpdate.start();
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             session.onJoin();
             packs.onJoin();
+            modUpdate.onJoin(client);
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> session.onDisconnect());
         // Admin-Taste (ohne Vorbelegung, im Steuerungs-Menue zuweisbar): fordert den Einmal-Link der Web-Oberflaeche an. Der Server prueft Operator-Recht selbst.
@@ -86,7 +89,13 @@ public final class PeakCoreClient implements ClientModInitializer {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
                 dispatcher.register(ClientCommands.literal("peakcorestatus").executes(context -> {
                     context.getSource().sendFeedback(Component.literal("PeakCore " + PeakCoreMod.VERSION + " (Protokoll "
-                            + de.peakverse.core.protocol.CoreProtocol.VERSION + ")\n" + session.debug() + "\n" + packs.debug()));
+                            + de.peakverse.core.protocol.CoreProtocol.VERSION + ")\n" + session.debug() + "\n" + packs.debug() + "\n" + modUpdate.debug()));
+                    return 1;
+                })));
+        // Mod-Update: laedt neuere Versionen der PeakVerse-Mods aus dem Release-Repo; getauscht wird beim Beenden des Spiels
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) ->
+                dispatcher.register(ClientCommands.literal("peakcoreupdate").executes(context -> {
+                    context.getSource().sendFeedback(Component.literal("[PeakVerse] " + modUpdate.command(net.minecraft.client.Minecraft.getInstance())));
                     return 1;
                 })));
     }
