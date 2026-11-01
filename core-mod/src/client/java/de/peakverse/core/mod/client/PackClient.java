@@ -106,6 +106,17 @@ final class PackClient implements PackReceiver.Env {
 
     @Override
     public void activate(String sha1) {
+        activateNow(sha1);
+    }
+
+    @Override
+    public boolean applyNow(String sha1) {
+        if (!activateNow(sha1)) return false;
+        chat("[PeakVerse] Neue Texturen vom Server wurden geladen. Fehlt etwas, hilft F3 + T (kein erneutes Beitreten noetig).");
+        return true;
+    }
+
+    private boolean activateNow(String sha1) {
         Minecraft mc = Minecraft.getInstance();
         try {
             Path dir = mc.getResourcePackDirectory();
@@ -127,9 +138,11 @@ final class PackClient implements PackReceiver.Env {
             Files.writeString(activeFile, sha1);
             deleteOldCopies(dir, name);
             LOG.info("Server-Pack {} aktiviert", sha1);
+            return true;
         } catch (IOException | RuntimeException e) {
             LOG.warn("Server-Pack konnte nicht aktiviert werden", e);
             chat("[PeakVerse] Das Server-Resource-Pack konnte nicht aktiviert werden: " + e.getMessage());
+            return false;
         }
     }
 

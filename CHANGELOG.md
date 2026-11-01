@@ -33,3 +33,6 @@
 - Core-Mod: Taste "PeakVerse Web-Oberflaeche oeffnen" (im Steuerungs-Menue zuweisbar, nur Operatoren)
 - Gesamt-Jar: baut die Teil-Jars jetzt immer mit (vorher konnte ein veraltetes Modul-Jar im Gesamt-Jar stecken)
 - TexturePeak (eingebaut): Texturen-Eintraege mit Archiv, Faehigkeiten (Effekte, Werte, Partikel), Web-Seite mit Pixel-Editor; `/texturepeak list|archive` mit klickbaren Eintraegen
+
+- Mod: ein geaendertes Server-Pack wird sofort aktiv, kein erneutes Beitreten noetig (F3+T als Reserve).
+- Web: neue Oberflaeche mit Kopfleiste, Pixel-Landschaft mit Parallaxe und Tag/Nacht.

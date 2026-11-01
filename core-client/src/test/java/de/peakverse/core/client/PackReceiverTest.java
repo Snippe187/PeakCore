@@ -15,7 +15,7 @@ class PackReceiverTest {
     private static final String A = "a".repeat(40);
     private static final String B = "b".repeat(40);
 
-    private static final class FakeEnv implements PackReceiver.Env {
+    private static class FakeEnv implements PackReceiver.Env {
         long now;
         final Set<String> cache = new HashSet<>();
         final List<String> chat = new ArrayList<>();
@@ -66,6 +66,25 @@ class PackReceiverTest {
         receiver.onJoin();
         assertEquals(List.of(A), env.activated);
         assertEquals(PackReceiver.State.IDLE, receiver.state());
+    }
+
+    @Test
+    void packIsAppliedRightAfterDownloadWhenTheEnvironmentCan() {
+        List<String> applied = new ArrayList<>();
+        FakeEnv now = new FakeEnv() {
+            @Override public boolean applyNow(String sha1) { applied.add(sha1); active = sha1; return true; }
+        };
+        PackReceiver r = new PackReceiver(now);
+        r.onOffer(offer(A));
+        now.downloads.get(0).done(null);
+        assertEquals(List.of(A), applied);
+        assertEquals(PackReceiver.State.IDLE, r.state());
+        assertEquals(null, now.pending, "kein wartendes Pack mehr");
+        now.now += PackReceiver.REMINDER_MS * 3;
+        r.tick();
+        assertTrue(now.chat.isEmpty(), "keine Erinnerung an einen Neubeitritt");
+        r.onOffer(offer(A));
+        assertTrue(now.downloads.size() == 1, "gleiches Pack wird nicht noch einmal geladen");
     }
 
     @Test

@@ -49,6 +49,14 @@ public final class PackReceiver {
 
         /** Merkt sich das wartende Pack dauerhaft ({@code null} = keins). */
         void setPendingSha1(String sha1);
+
+        /**
+         * Schaltet ein frisch geladenes Pack sofort ein, ohne dass man neu beitreten muss. {@code true}, wenn es geklappt hat und der Spieler im
+         * Chat Bescheid bekommen hat; {@code false} (Standard) heisst: wie bisher erst beim naechsten Beitritt.
+         */
+        default boolean applyNow(String sha1) {
+            return false;
+        }
     }
 
     /** Abstand der Chat-Erinnerungen, solange ein geladenes Pack auf den Beitritt wartet. */
@@ -99,6 +107,13 @@ public final class PackReceiver {
     }
 
     private void becomePending() {
+        String sha = pendingSha;
+        if (sha != null && env.applyNow(sha)) {
+            state = State.IDLE;
+            pendingSha = null;
+            remember(null);
+            return;
+        }
         state = State.PENDING;
         remember(pendingSha);
         lastReminderAt = env.now();
