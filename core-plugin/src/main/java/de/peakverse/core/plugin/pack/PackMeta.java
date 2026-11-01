@@ -16,8 +16,13 @@ public record PackMeta(String description, int major, int minor) {
     }
 
     public byte[] toJson() {
+        return toJson("");
+    }
+
+    /** Mit den Overlays des Basis-Packs ({@code overlayEntries}: JSON-Array der Eintraege, leer = keine). */
+    public byte[] toJson(String overlayEntries) {
         String json = "{\n  \"pack\": {\n    \"description\": " + quote(description) + ",\n    \"min_format\": [" + major + ", " + minor
-                + "],\n    \"max_format\": [" + major + ", " + minor + "]\n  }\n}\n";
+                + "],\n    \"max_format\": [" + major + ", " + minor + "]\n  }" + (overlayEntries == null || overlayEntries.isBlank() ? "" : ",\n  \"overlays\": {\n    \"entries\": " + overlayEntries + "\n  }") + "\n}\n";
         return json.getBytes(StandardCharsets.UTF_8);
     }
 

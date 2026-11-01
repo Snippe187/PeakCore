@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.3 (in Arbeit)
+- Basis-Pack/Bibliothek: **Overlays** (z. B. bei Vanilla-Tweaks-Packs: overlay_84_88/...) werden jetzt uebernommen: ihre Ordner kommen ins fertige Pack und die overlays-Eintraege in die pack.mcmeta; Ordner, die nicht in der mcmeta des Packs stehen, bleiben draussen. Lose Dateien im Hauptordner (Lizenz, Liesmich, Auswahl-Liste) erzeugen keine rote Meldung mehr
+
 ## 0.1.2 (in Arbeit)
 - **Handy verbinden**: Auf der Anmeldeseite den Minecraft-Namen eingeben, im Spiel kommt eine Nachricht mit Code und [Erlauben]/[Ablehnen]; danach bleibt das Geraet dauerhaft angemeldet (Schluessel nur als Pruefsumme gespeichert, `devices.json`). Karte "Verbundene Geraete" auf der Server-Seite zum Sperren, im Spiel `/peakweb devices` und `/peakweb revoke <id>`. Wer kein Operator mehr ist und keine Rolle mit Web-Zugang hat, verliert alle Geraete. Config `web.remote-login`, `web.device-expire-days`
 - **Pack-Bibliothek**: mehrere fertige Resource-Packs (ZIP bis 250 MB, in Stuecken hochgeladen) in `plugins/PeakCore/pack-library/`, Karten mit Vorschaubild, Format, Groesse und Notiz, eines davon ist das Server-Pack; Wechsel schickt es sofort an alle Spieler online. Pruefung beim Hochladen (Aufbau, pack.mcmeta, Grenzen), automatische Reparatur bei Unterordner oder Windows-Pfaden mit `\`, Anzeige von Ueberschneidungen mit den Modul-Texturen, Umbenennen, Herunterladen (bis 100 MB), Loeschen. Ein bisheriges `base-pack.zip` wird automatisch uebernommen

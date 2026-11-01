@@ -28,9 +28,14 @@ public final class PackZip {
 
     /** Baut das Pack. {@code files} darf {@code pack.mcmeta} nicht enthalten, sie wird aus {@code meta} erzeugt; {@code icon} ist optional ({@code pack.png}). */
     public static Built build(Map<String, byte[]> files, PackMeta meta, byte[] icon) {
+        return build(files, meta, icon, "");
+    }
+
+    /** Wie {@link #build(Map, PackMeta, byte[])}, mit den Overlay-Eintraegen des Basis-Packs in der pack.mcmeta. */
+    public static Built build(Map<String, byte[]> files, PackMeta meta, byte[] icon, String overlayEntries) {
         Map<String, byte[]> all = new TreeMap<>(files);
         if (all.containsKey("pack.mcmeta") || all.containsKey("pack.png")) throw new IllegalArgumentException("pack.mcmeta und pack.png setzt der Core");
-        all.put("pack.mcmeta", meta.toJson());
+        all.put("pack.mcmeta", meta.toJson(overlayEntries));
         if (icon != null) all.put("pack.png", icon);
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();

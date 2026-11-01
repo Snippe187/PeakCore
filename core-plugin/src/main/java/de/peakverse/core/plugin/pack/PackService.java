@@ -131,12 +131,14 @@ public final class PackService {
     public synchronized Status rebuild() throws IOException {
         Map<String, byte[]> base = Map.of();
         byte[] icon = null;
+        String overlays = "";
         List<String> problems = new ArrayList<>();
         Path baseZip = baseFile.get();
         if (baseZip != null && Files.isRegularFile(baseZip)) {
             PackBase.Loaded loaded = PackBase.load(baseZip);
             base = loaded.files();
             icon = loaded.icon();
+            overlays = loaded.overlays();
             for (String s : loaded.skipped()) problems.add("Basis-Pack: " + s + " nicht uebernommen");
         }
         Path customDir = customFolder.get();
@@ -169,7 +171,7 @@ public final class PackService {
             PackMerger.Result merged = PackMerger.merge(base, contributions, variant.equals(PackState.STANDARD));
             if (variant.equals(PackState.STANDARD)) standardResult = merged;
             Map<String, byte[]> files = optimizePng.get() ? optimized(merged.files(), saved, variant.equals(PackState.STANDARD)) : merged.files();
-            PackZip.Built built = PackZip.build(files, meta.get(), icon);
+            PackZip.Built built = PackZip.build(files, meta.get(), icon, overlays);
             boolean wrote = store(built);
             if (variant.equals(PackState.STANDARD)) lastBuilt = built;
             variants.put(variant, new VariantBuild(variant, built.sha1(), built.zip().length, built.fileCount(), wrote));
