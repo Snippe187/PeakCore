@@ -84,7 +84,7 @@ public final class PermStore {
     public record Grant(boolean all, Set<String> modules) {
         public boolean allows(String module) {
             // Die Spieler-Seite darf nur, wer ohnehin alles darf: sonst koennte man sich selbst Rechte geben
-            return all || (!module.equals("players") && modules.contains(module));
+            return all || (!module.equals("players") && !module.equals("update") && modules.contains(module));
         }
     }
 

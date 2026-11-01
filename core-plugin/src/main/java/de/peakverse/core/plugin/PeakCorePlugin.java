@@ -7,6 +7,8 @@ import de.peakverse.core.plugin.pack.PackMeta;
 import de.peakverse.core.plugin.perm.PermStore;
 import de.peakverse.core.plugin.perm.PermissionService;
 import de.peakverse.core.plugin.perm.PlayersWeb;
+import de.peakverse.core.plugin.update.UpdateService;
+import de.peakverse.core.plugin.update.UpdateWeb;
 import de.peakverse.core.plugin.pack.PackService;
 import de.peakverse.core.plugin.pack.PackWebServer;
 import de.peakverse.core.plugin.web.AdminLog;
@@ -45,6 +47,7 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
     private WebHost webHost;
     private PermStore permStore;
     private PermissionService permService;
+    private UpdateService updates;
 
     @Override
     public void onEnable() {
@@ -166,6 +169,10 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
             return true;
         });
         permService.start();
+        updates = new UpdateService(this, version, getFile().getName());
+        updates.start();
+        command.setUpdates(updates);
+        if (webOn) new UpdateWeb(webHost.registry("update"), updates).register();
         getCommand("peakcore").setExecutor(command);
         getCommand("peakcore").setTabCompleter(command);
         getLogger().info("PeakCore " + version + " bereit (API " + PeakCoreApi.API_VERSION + ", Kanal " + Frame.CHANNEL + ").");
@@ -205,6 +212,7 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        if (updates != null) updates.stop();
         if (permService != null) permService.stop();
         if (webHub != null) webHub.closeAll();
         if (webAuth != null) webAuth.clear();

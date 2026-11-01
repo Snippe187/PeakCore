@@ -17,7 +17,7 @@ import org.bukkit.entity.Player;
 
 /** {@code /peakcore}: Version, Module, Kanal-Status und Spieler mit Mod. Nur fuer Administratoren (Recht peakcore.admin). */
 final class CoreCommand implements CommandExecutor, TabCompleter {
-    private static final List<String> SUB = List.of("version", "modules", "status", "players", "pack", "web");
+    private static final List<String> SUB = List.of("version", "modules", "status", "players", "pack", "web", "update");
 
     private final String coreVersion;
     private final ModuleRegistry registry;
@@ -26,6 +26,11 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
     private final Supplier<List<ModuleLoader.Result>> builtIn;
 
     private final PackCommand packCommand;
+    private de.peakverse.core.plugin.update.UpdateService updates;
+
+    void setUpdates(de.peakverse.core.plugin.update.UpdateService updates) {
+        this.updates = updates;
+    }
 
     private final java.util.function.Function<org.bukkit.OfflinePlayer, String> webLink;
     private final Supplier<String> webStatus;
@@ -84,6 +89,26 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(Component.text(" - " + p.getName() + ": " + handshake.describe(p), ok ? NamedTextColor.GREEN : NamedTextColor.GRAY));
                 }
             }
+            case "update" -> {
+                String act = args.length > 1 ? args[1].toLowerCase() : "status";
+                try {
+                    switch (act) {
+                        case "check" -> {
+                            updates.check();
+                            sender.sendMessage(Component.text(updates.isNewer() ? "Neue Version verfuegbar." : "Du bist auf dem neuesten Stand (oder die Quelle ist nicht erreichbar, siehe status).", NamedTextColor.GOLD));
+                        }
+                        case "download" -> {
+                            updates.download();
+                            sender.sendMessage(Component.text("Update geladen und geprueft. Es wird beim naechsten Start installiert (/peakcore update restart <Minuten>).", NamedTextColor.GREEN));
+                        }
+                        case "restart" -> updates.scheduleRestart(args.length > 2 ? Integer.parseInt(args[2]) : 5);
+                        case "cancel" -> sender.sendMessage(Component.text(updates.cancelRestart() ? "Neustart abgebrochen." : "Es war kein Neustart geplant.", NamedTextColor.GOLD));
+                        default -> sender.sendMessage(Component.text(updates.statusJson(), NamedTextColor.GRAY));
+                    }
+                } catch (java.io.IOException | IllegalArgumentException e) {
+                    sender.sendMessage(Component.text("Update: " + e.getMessage(), NamedTextColor.RED));
+                }
+            }
             case "pack" -> packCommand.run(sender, java.util.Arrays.copyOfRange(args, 1, args.length));
             case "web" -> {
                 org.bukkit.OfflinePlayer p;
@@ -111,7 +136,7 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(Component.text(webStatus.get(), NamedTextColor.DARK_GRAY));
             }
             default -> {
-                sender.sendMessage(Component.text("Benutzung: /" + label + " <version|modules|status|players|pack|web>", NamedTextColor.RED));
+                sender.sendMessage(Component.text("Benutzung: /" + label + " <version|modules|status|players|pack|web|update>", NamedTextColor.RED));
                 return false;
             }
         }

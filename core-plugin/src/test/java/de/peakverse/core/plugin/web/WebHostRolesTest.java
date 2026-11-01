@@ -57,6 +57,7 @@ class WebHostRolesTest {
         server.stop(0);
     }
 
+    /** "loopback" ist, was der Server fuer Anfragen von diesem Rechner (127.0.0.1 oder ::1) merkt. */
     private String cookie(String ip) {
         return "peak_session=" + auth.redeem(auth.issueToken(player, "Neo"), ip).orElseThrow().id();
     }
@@ -71,7 +72,7 @@ class WebHostRolesTest {
 
     @Test
     void roleSeesOnlyItsModules() throws Exception {
-        String c = cookie("127.0.0.1");
+        String c = cookie("loopback");
         assertEquals(200, status("/api/demo/hi", c));
         assertEquals(403, status("/api/secret/hi", c));
         assertEquals(404, status("/m/secret/panel.js", c));
@@ -84,10 +85,10 @@ class WebHostRolesTest {
     @Test
     void playersPageNeedsFullAccess() throws Exception {
         grant.set(new PermStore.Grant(false, Set.of("demo", "players")));
-        assertEquals(403, status("/api/players/hi", cookie("127.0.0.1")), "ein Modul-Recht 'players' reicht nicht");
+        assertEquals(403, status("/api/players/hi", cookie("loopback")), "ein Modul-Recht 'players' reicht nicht");
         grant.set(new PermStore.Grant(true, Set.of()));
-        assertEquals(200, status("/api/players/hi", cookie("127.0.0.1")));
-        assertEquals(200, status("/api/secret/hi", cookie("127.0.0.1")));
+        assertEquals(200, status("/api/players/hi", cookie("loopback")));
+        assertEquals(200, status("/api/secret/hi", cookie("loopback")));
     }
 
     @Test
@@ -101,7 +102,7 @@ class WebHostRolesTest {
 
     @Test
     void removedAccessEndsTheSessionAtOnce() throws Exception {
-        String c = cookie("127.0.0.1");
+        String c = cookie("loopback");
         assertEquals(200, status("/api/demo/hi", c));
         grant.set(null);
         assertEquals(401, status("/api/demo/hi", c));

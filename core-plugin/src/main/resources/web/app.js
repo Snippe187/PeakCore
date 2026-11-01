@@ -13,6 +13,7 @@ const STR = {
     statModules: 'Module', statAdmins: 'Admins online', statLangs: 'Sprachen',
     srvT: 'Dein Server', srvSub: 'Status und Werkzeuge auf einen Blick.', srvPack: 'Pack-Server', running: 'läuft', stopped: 'aus', sending: 'Pack wird gesendet', testMode: 'Testmodus', problems: 'Hinweise',
     adminsOnline: 'Admins online', tools: 'Werkzeuge', recent: 'Zuletzt geändert', open: 'Öffnen',
+    updT: 'Updates', updOff: 'Die Update-Prüfung ist aus (update.enabled in der config.yml). Du kannst trotzdem manuell prüfen.', updCheck: 'Jetzt prüfen', updDownload: 'Herunterladen', updRestart: 'Neu starten in', updMin: 'Min.', updGo: 'Neustart planen', updCancel: 'Abbrechen', updCur: 'Installiert', updLatest: 'Neueste', updStaged: 'Bereit zum Installieren', updNone: 'Auf dem neuesten Stand.', updNotes: 'Was ist neu?', updNever: 'noch nie geprüft', updHint: 'Der Download wird mit einer SHA-256-Prüfsumme geprüft und beim nächsten Start von Paper installiert. Der Neustart braucht ein Start-Skript, das den Server wieder hochfährt.', updIn: 'Neustart in',
     modT: 'Module', modSub: 'Jedes Modul bringt eigene Funktionen mit. Du schaltest sie in der Konfiguration ein und aus.', planned: 'Geplant', soon: 'Kommt später',
     online: 'Gerade hier', nobody: 'nur du', noModules: 'Keine Bereiche aktiv.', time: 'Zeit', admin: 'Admin', area: 'Bereich', action: 'Aktion',
     noLog: 'Noch nichts protokolliert.', conflict: 'Konflikt', conflictText: 'Ein anderer Administrator hat inzwischen etwas geaendert', overwrite: 'Trotzdem speichern', cancel: 'Abbrechen',
@@ -29,6 +30,7 @@ const STR = {
     statModules: 'Modules', statAdmins: 'Admins online', statLangs: 'Languages',
     srvT: 'Your server', srvSub: 'Status and tools at a glance.', srvPack: 'Pack server', running: 'running', stopped: 'off', sending: 'Sending pack', testMode: 'Test mode', problems: 'Notices',
     adminsOnline: 'Admins online', tools: 'Tools', recent: 'Recent changes', open: 'Open',
+    updT: 'Updates', updOff: 'Update checks are off (update.enabled in config.yml). You can still check manually.', updCheck: 'Check now', updDownload: 'Download', updRestart: 'Restart in', updMin: 'min', updGo: 'Schedule restart', updCancel: 'Cancel', updCur: 'Installed', updLatest: 'Latest', updStaged: 'Ready to install', updNone: 'Up to date.', updNotes: 'What is new?', updNever: 'never checked', updHint: 'The download is verified with a SHA-256 checksum and installed by Paper on the next start. Restarting needs a start script that brings the server back up.', updIn: 'Restart in',
     modT: 'Modules', modSub: 'Every module brings its own features. Switch them on and off in the config.', planned: 'Planned', soon: 'Coming later',
     online: 'Here now', nobody: 'only you', noModules: 'No areas active.', time: 'Time', admin: 'Admin', area: 'Area', action: 'Action',
     noLog: 'Nothing logged yet.', conflict: 'Conflict', conflictText: 'Another administrator has changed something in the meantime', overwrite: 'Save anyway', cancel: 'Cancel',
@@ -301,6 +303,7 @@ async function serverPage(view) {
   try { log = await api('/api/log?n=6'); } catch { /* egal */ }
   const chip = (txt, kind = '') => h('span', { class: 'chip ' + kind }, txt);
   const tools = S.modules.filter(m => CORE_TOOLS.includes(m.id) && m.id !== 'players');
+  const upd = await updateCard();
   view.append(
     h('section', { class: 'srv-head reveal' },
       h('div', { class: 'rack' }, [0, 1, 2].map(i => h('div', { class: 'unit' }, h('i', { style: 'animation-delay:' + (i * .4) + 's' }), h('i', { style: 'animation-delay:' + (i * .4 + .2) + 's' }), h('em', {})))),
@@ -308,6 +311,7 @@ async function serverPage(view) {
         h('div', { class: 'chips' }, chip('PeakCore ' + S.session.version), chip(Math.max(1, S.session.online.length) + ' ' + t('statAdmins')),
           st ? [chip(t('srvPack') + ': ' + (st.serverRunning ? t('running') : t('stopped')), st.serverRunning ? 'good' : 'warn'), st.sending ? chip(t('sending'), 'good') : null, st.testMode ? chip(t('testMode'), 'warn') : null,
             (st.problems?.length) ? chip(st.problems.length + ' ' + t('problems'), 'bad') : null] : null))),
+    upd,
     h('h2', { class: 'reveal' }, t('tools')),
     h('div', { class: 'mgrid' }, tools.map(m => modCard(m))),
     h('h2', { class: 'reveal' }, t('recent')),
@@ -315,6 +319,39 @@ async function serverPage(view) {
 }
 
 // ---- Module ----
+// Update-Karte: pruefen, herunterladen, Neustart mit Countdown (nur fuer Admins mit Voll-Zugang sichtbar)
+async function updateCard() {
+  let st;
+  try { st = await api('/api/update/status', {}, 'update'); } catch { return null; }
+  const box = h('section', { class: 'card reveal upd' });
+  const setKids = (el, ...k) => el.replaceChildren(...k.flat().filter(x => x != null && x !== false));
+  const act = async (path, body) => { try { st = await api('/api/update/' + path, { method: 'POST', body: body ?? '' }, 'update'); draw(); } catch (e) { toast(e.message, 'bad'); } };
+  const mins = h('input', { type: 'number', min: 0, max: 120, value: st.restartMinutes, style: 'width:80px' });
+  function draw() {
+    const chip = (txt, kind = '') => h('span', { class: 'chip ' + kind }, txt);
+    setKids(box, 
+      h('div', { class: 'row' }, h('h2', { style: 'margin:0' }, t('updT')), chip(t('updCur') + ' ' + st.current),
+        st.latest ? chip(t('updLatest') + ' ' + st.latest.version, st.newer ? 'warn' : 'good') : null,
+        st.staged ? chip(t('updStaged') + (st.stagedVersion ? ' ' + st.stagedVersion : ''), 'good') : null,
+        h('span', { class: 'sub', style: 'margin-left:auto' }, st.checkedAt ? new Date(st.checkedAt).toLocaleString(S.lang) : t('updNever'))),
+      !st.enabled ? h('p', { class: 'sub' }, t('updOff')) : null,
+      st.error ? h('p', { style: 'color:var(--bad)' }, st.error) : (st.latest && !st.newer ? h('p', { class: 'sub' }, t('updNone')) : null),
+      st.latest?.notes && st.newer ? h('details', {}, h('summary', {}, t('updNotes')), h('pre', { style: 'white-space:pre-wrap;color:var(--dim)' }, st.latest.notes)) : null,
+      h('div', { class: 'row', style: 'margin-top:10px' },
+        h('button', { class: 'px-btn', onclick: () => act('check') }, t('updCheck')),
+        st.newer && !st.staged ? h('button', { class: 'px-btn primary', disabled: st.busy, onclick: () => act('download') }, t('updDownload')) : null,
+        st.restartIn >= 0 ? [chip(t('updIn') + ' ' + (st.restartIn >= 60 ? Math.ceil(st.restartIn / 60) + ' ' + t('updMin') : st.restartIn + ' s'), 'warn'), h('button', { class: 'px-btn danger', onclick: () => act('cancel') }, t('updCancel'))]
+          : [h('span', { class: 'sub' }, t('updRestart')), mins, h('span', { class: 'sub' }, t('updMin')), h('button', { class: 'px-btn', onclick: async () => { if (await confirmBox(t('updGo') + '?')) act('restart', { minutes: +mins.value }); } }, t('updGo'))]),
+      h('p', { class: 'sub', style: 'margin-top:10px' }, t('updHint')));
+  }
+  draw();
+  // Countdown live mitlaufen lassen, solange die Karte sichtbar ist
+  const timer = setInterval(async () => {
+    if (!box.isConnected) { clearInterval(timer); return; }
+    if (st.restartIn >= 0) { try { st = await api('/api/update/status', {}, 'update'); draw(); } catch { /* egal */ } }
+  }, 2000);
+  return box;
+}
 function modCard(m) {
   return h('div', { class: 'mcard reveal', onclick: () => go(m.id) },
     h('div', { class: 'mlogo' }, logoFor(m.id, 84)), h('div', { class: 'mtxt' }, h('h3', {}, modTitle(m)), h('p', {}, tr(DESC[m.id]) || ''), h('span', { class: 'px-btn small' }, t('open') + ' →')));

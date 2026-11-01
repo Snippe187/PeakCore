@@ -337,7 +337,9 @@ public final class WebHost implements HttpHandler {
     }
 
     private static String remoteIp(HttpExchange ex) {
-        return ex.getRemoteAddress().getAddress().getHostAddress();
+        // localhost kann je Anfrage als 127.0.0.1 oder ::1 ankommen: beides ist derselbe Rechner
+        java.net.InetAddress a = ex.getRemoteAddress().getAddress();
+        return a.isLoopbackAddress() ? "loopback" : a.getHostAddress();
     }
 
     private void sendStatic(HttpExchange ex, String name) throws IOException {
