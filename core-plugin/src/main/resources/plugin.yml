@@ -4,6 +4,9 @@ main: de.peakverse.core.plugin.PeakCorePlugin
 api-version: '26.2'
 description: "Basis fuer die PeakVerse-Module (PeakSound, TexturePeak, ...): API, Kanal zur Mod und Resource-Pack-Dienst."
 commands:
+  peakweb:
+    description: Link zur PeakVerse-Web-Oberflaeche (fuer Rollen mit Web-Zugang)
+    usage: /peakweb
   peakcore:
     description: Version, Module, Kanal-Status und Spieler mit Mod von PeakCore
     usage: /peakcore <version|modules|status|players>
@@ -12,3 +15,5 @@ permissions:
   peakcore.admin:
     description: PeakCore-Befehle und Verwaltung
     default: op
+
+

@@ -9,6 +9,7 @@ import de.peakverse.core.api.web.WebHandler;
 import de.peakverse.core.api.web.WebRegistry;
 import de.peakverse.core.api.web.WebRequest;
 import de.peakverse.core.api.web.WebResponse;
+import de.peakverse.core.plugin.perm.PermStore;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,6 +23,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -99,22 +101,39 @@ public final class WebHost implements HttpHandler {
     private final WebAuth auth;
     private final AdminLog log;
     private final LiveHub hub;
-    private final Predicate<UUID> stillAdmin;
+    private final Function<UUID, PermStore.Grant> access;
+    private volatile boolean bindIp = true;
     private final MainThread main;
     private final Logger logger;
     private final boolean secureCookie;
     private final String version;
     private final Map<String, Module> modules = new ConcurrentHashMap<>();
 
+    /** Einfache Fassung: wer der Pruefung genuegt, darf alles (so arbeitet es nur mit Operatoren). */
     public WebHost(WebAuth auth, AdminLog log, LiveHub hub, Predicate<UUID> stillAdmin, MainThread main, boolean secureCookie, String version, Logger logger) {
+        this(auth, log, hub, (Function<UUID, PermStore.Grant>) (id -> stillAdmin.test(id) ? new PermStore.Grant(true, Set.of()) : null), main, secureCookie, version, logger);
+    }
+
+    /** Mit Rollen: {@code access} liefert, was der Spieler im Web darf, oder {@code null} (kein Zugang). */
+    public WebHost(WebAuth auth, AdminLog log, LiveHub hub, Function<UUID, PermStore.Grant> access, MainThread main, boolean secureCookie, String version, Logger logger) {
         this.auth = auth;
         this.log = log;
         this.hub = hub;
-        this.stillAdmin = stillAdmin;
+        this.access = access;
         this.main = main;
         this.secureCookie = secureCookie;
         this.version = version;
         this.logger = logger;
+    }
+
+    /** Sitzung an die IP binden, mit der man sich angemeldet hat (Standard: ja). */
+    public void setBindIp(boolean bind) {
+        this.bindIp = bind;
+    }
+
+    /** Kennungen aller Module mit Web-Seite (fuer die Rollen). */
+    public List<String> moduleIds() {
+        return modules.values().stream().filter(m -> m.script != null).map(m -> m.id).sorted().toList();
     }
 
     /** Das Register fuer ein Modul (immer dasselbe je ID). */
@@ -171,9 +190,11 @@ public final class WebHost implements HttpHandler {
             return false;
         }
         WebAuth.Session session = auth.session(cookie(ex, COOKIE)).orElse(null);
-        if (session == null || !stillAdmin.test(session.player())) {
+        PermStore.Grant grant = session == null ? null : access.apply(session.player());
+        boolean wrongIp = session != null && bindIp && session.ip() != null && !session.ip().equals(remoteIp(ex));
+        if (session == null || grant == null || wrongIp) {
             if (session != null) auth.revokeAll(session.player());
-            send(ex, WebResponse.error(401, "Nicht angemeldet. Im Spiel /peakcore web eingeben."));
+            send(ex, WebResponse.error(401, "Nicht angemeldet. Im Spiel /peakcore web (oder /peakweb) eingeben."));
             return false;
         }
         boolean write = !method.equals("GET") && !method.equals("HEAD");
@@ -182,12 +203,12 @@ public final class WebHost implements HttpHandler {
             return false;
         }
         if (path.startsWith("/m/")) {
-            panelScript(ex, path);
+            panelScript(ex, path, grant);
             return false;
         }
         String api = path.substring("/api/".length());
         switch (api) {
-            case "session" -> send(ex, WebResponse.json(sessionInfo(session)));
+            case "session" -> send(ex, WebResponse.json(sessionInfo(session, grant)));
             case "log" -> {
                 int n = clamp(query.get("n"), 1, 500, 100);
                 try {
@@ -209,15 +230,19 @@ public final class WebHost implements HttpHandler {
                 }
                 return true;
             }
-            default -> moduleApi(ex, session, method, api, query);
+            default -> moduleApi(ex, session, grant, method, api, query);
         }
         return false;
     }
 
-    private void moduleApi(HttpExchange ex, WebAuth.Session session, String method, String api, Map<String, String> query) throws IOException {
+    private void moduleApi(HttpExchange ex, WebAuth.Session session, PermStore.Grant grant, String method, String api, Map<String, String> query) throws IOException {
         int slash = api.indexOf('/');
         String id = slash < 0 ? api : api.substring(0, slash);
         String rest = slash < 0 ? "" : api.substring(slash + 1);
+        if (!grant.allows(id)) {
+            send(ex, WebResponse.error(403, "Dafuer hast du keine Berechtigung."));
+            return;
+        }
         Module m = modules.get(id);
         if (m == null) {
             send(ex, WebResponse.error(404, "Unbekanntes Modul"));
@@ -266,12 +291,12 @@ public final class WebHost implements HttpHandler {
         send(ex, response);
     }
 
-    private String sessionInfo(WebAuth.Session s) {
+    private String sessionInfo(WebAuth.Session s, PermStore.Grant grant) {
         JsonObject o = new JsonObject();
         o.addProperty("name", s.name());
         o.addProperty("version", version);
         JsonArray mods = new JsonArray();
-        modules.values().stream().filter(m -> m.script != null).sorted((a, b) -> a.id.compareTo(b.id)).forEach(m -> {
+        modules.values().stream().filter(m -> m.script != null && grant.allows(m.id)).sorted((a, b) -> a.id.compareTo(b.id)).forEach(m -> {
             JsonObject j = new JsonObject();
             j.addProperty("id", m.id);
             j.addProperty("titleDe", m.titleDe);
@@ -286,10 +311,10 @@ public final class WebHost implements HttpHandler {
         return GSON.toJson(o);
     }
 
-    private void panelScript(HttpExchange ex, String path) throws IOException {
+    private void panelScript(HttpExchange ex, String path, PermStore.Grant grant) throws IOException {
         // /m/<modul>/panel.js
         String[] parts = path.split("/");
-        Module m = parts.length == 4 && parts[3].equals("panel.js") ? modules.get(parts[2]) : null;
+        Module m = parts.length == 4 && parts[3].equals("panel.js") && grant.allows(parts[2]) ? modules.get(parts[2]) : null;
         if (m == null || m.script == null) {
             send(ex, WebResponse.error(404, "Keine Seite"));
             return;
@@ -298,7 +323,7 @@ public final class WebHost implements HttpHandler {
     }
 
     private void login(HttpExchange ex, String token) throws IOException {
-        String ip = ex.getRemoteAddress().getAddress().getHostAddress();
+        String ip = remoteIp(ex);
         var session = auth.redeem(token, ip);
         if (session.isEmpty()) {
             send(ex, new WebResponse(403, "text/html; charset=utf-8",
@@ -306,9 +331,13 @@ public final class WebHost implements HttpHandler {
             return;
         }
         writeLog(session.get().name(), "core", "Angemeldet");
-        ex.getResponseHeaders().add("Set-Cookie", COOKIE + "=" + session.get().id() + "; Path=/; HttpOnly; SameSite=Strict; Max-Age=" + WebAuth.SESSION_TTL_MS / 1000 + (secureCookie ? "; Secure" : ""));
+        ex.getResponseHeaders().add("Set-Cookie", COOKIE + "=" + session.get().id() + "; Path=/; HttpOnly; SameSite=Strict; Max-Age=" + auth.sessionTtlMs() / 1000 + (secureCookie ? "; Secure" : ""));
         ex.getResponseHeaders().set("Location", "/");
         ex.sendResponseHeaders(302, -1);
+    }
+
+    private static String remoteIp(HttpExchange ex) {
+        return ex.getRemoteAddress().getAddress().getHostAddress();
     }
 
     private void sendStatic(HttpExchange ex, String name) throws IOException {
@@ -391,7 +420,6 @@ public final class WebHost implements HttpHandler {
         }
     }
 
-    public List<String> moduleIds() {
-        return new ArrayList<>(modules.keySet());
-    }
 }
+
+

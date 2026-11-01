@@ -36,7 +36,7 @@ class WebHostTest {
     void setUp(@TempDir Path dir) throws Exception {
         auth = new WebAuth(System::currentTimeMillis);
         LiveHub hub = new LiveHub();
-        host = new WebHost(auth, new AdminLog(dir.resolve("log.jsonl"), System::currentTimeMillis), hub, id -> admin.get(), new WebHost.MainThread() {
+        host = new WebHost(auth, new AdminLog(dir.resolve("log.jsonl"), System::currentTimeMillis), hub, (java.util.function.Predicate<java.util.UUID>) id -> admin.get(), new WebHost.MainThread() {
             public <T> T call(java.util.concurrent.Callable<T> task) throws Exception {
                 return task.call();
             }
@@ -171,3 +171,4 @@ class WebHostTest {
         assertEquals(401, call("GET", "/api/session", c, null).statusCode());
     }
 }
+

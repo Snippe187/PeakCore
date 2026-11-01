@@ -1,4 +1,4 @@
-﻿:root, :root[data-theme="day"] {
+:root, :root[data-theme="day"] {
   --bg: #26292a; --panel: #313233; --panel2: #3d3f41; --line: #151515; --text: #f2f2f2; --dim: #b4b8bd;
   --accent: #5fbf3c; --accent2: #8b5a2b; --on-accent: #ffffff; --good: #6fd04a; --warn: #fbbf24; --bad: #f87171; --sky: #98c9f6; --px: 3px;
 }

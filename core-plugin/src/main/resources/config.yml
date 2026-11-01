@@ -50,6 +50,10 @@ web:
   # (Der Link aus /peakcore web nutzt diese Adresse.) Ohne HTTPS laufen Passwoerter nicht, aber der Einmal-Link und das Cookie sind im Klartext
   # sichtbar: fuer das Internet besser hinter einem HTTPS-Proxy betreiben.
   public-url: ""
+  # Wie lange eine Anmeldung gilt (Stunden).
+  session-hours: 8
+  # Eine Sitzung gilt nur von der IP, mit der man sich angemeldet hat. Hinter einem Proxy (alle Anfragen kommen von dessen IP) auf false stellen.
+  bind-session-ip: true
 
 # Eingebaute Module. Ein ausgeschaltetes Modul wird nicht gestartet (nach Aenderung den Server neu starten).
 # Seine Daten bleiben unberuehrt liegen.
@@ -58,3 +62,4 @@ modules:
     enabled: true
   texturepeak:
     enabled: true
+

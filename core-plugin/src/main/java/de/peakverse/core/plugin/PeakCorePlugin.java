@@ -4,6 +4,9 @@ import de.peakverse.core.api.ModuleInfo;
 import de.peakverse.core.api.PeakCoreApi;
 import de.peakverse.core.api.module.PeakModule;
 import de.peakverse.core.plugin.pack.PackMeta;
+import de.peakverse.core.plugin.perm.PermStore;
+import de.peakverse.core.plugin.perm.PermissionService;
+import de.peakverse.core.plugin.perm.PlayersWeb;
 import de.peakverse.core.plugin.pack.PackService;
 import de.peakverse.core.plugin.pack.PackWebServer;
 import de.peakverse.core.plugin.web.AdminLog;
@@ -40,6 +43,8 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
     private WebAuth webAuth;
     private LiveHub webHub;
     private WebHost webHost;
+    private PermStore permStore;
+    private PermissionService permService;
 
     @Override
     public void onEnable() {
@@ -62,10 +67,14 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
         // Der Admin-Status folgt /op und /deop: alle 2 Sekunden abgleichen, gemeldet wird nur bei Aenderungen
         Bukkit.getScheduler().runTaskTimer(this, () -> handshake.checkAdmins(Bukkit.getOnlinePlayers()), 40L, 40L);
 
-        webAuth = new WebAuth(System::currentTimeMillis);
+        permStore = new PermStore(getDataFolder().toPath(), System::currentTimeMillis, getLogger());
+        permStore.load();
+        permService = new PermissionService(this, permStore);
+        webAuth = new WebAuth(System::currentTimeMillis, (long) (getConfig().getDouble("web.session-hours", 8) * 3_600_000L));
         webHub = new LiveHub();
-        webHost = new WebHost(webAuth, new AdminLog(getDataFolder().toPath().resolve("web-log.jsonl"), System::currentTimeMillis), webHub,
-                uuid -> Bukkit.getOfflinePlayer(uuid).isOp(), new WebHost.MainThread() {
+        AdminLog adminLog = new AdminLog(getDataFolder().toPath().resolve("web-log.jsonl"), System::currentTimeMillis);
+        webHost = new WebHost(webAuth, adminLog, webHub,
+                (java.util.function.Function<java.util.UUID, PermStore.Grant>) (uuid -> permStore.webGrant(uuid, Bukkit.getOfflinePlayer(uuid).isOp())), new WebHost.MainThread() {
                     @Override
                     public <T> T call(java.util.concurrent.Callable<T> task) throws Exception {
                         try {
@@ -78,6 +87,14 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
                     }
                 }, webBase().startsWith("https://"), version, getLogger());
         boolean webOn = getConfig().getBoolean("web.enabled", false);
+        webHost.setBindIp(getConfig().getBoolean("web.bind-session-ip", true));
+        if (webOn) {
+            try (java.io.InputStream in = getResource("web/players-panel.js")) {
+                new PlayersWeb(webHost.registry("players"), permStore, permService, adminLog, webHost::moduleIds).register(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+            } catch (java.io.IOException | RuntimeException e) {
+                getLogger().log(Level.SEVERE, "Die Spieler-Seite der Web-Oberflaeche konnte nicht angelegt werden", e);
+            }
+        }
         modules = new ModuleLoader(findModules(), this::skipReason,
                 m -> new ModuleHost(this, m, version, webOn ? webHost.registry(m.id()) : de.peakverse.core.api.web.WebRegistry.NONE), getLogger());
         packs = new PackService(
@@ -129,6 +146,26 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
                     return webBase() + "/login?t=" + webAuth.issueToken(player.getUniqueId(), String.valueOf(player.getName()));
                 }, () -> webAuth.sessionCount() + " Sitzungen, " + webHub.count() + " offene Seiten");
         if (webOn) Bukkit.getScheduler().runTaskTimerAsynchronously(this, webHub::ping, 2400L, 2400L);
+        getCommand("peakweb").setExecutor((s, c, l, a) -> {
+            if (!(s instanceof Player p)) {
+                s.sendMessage("Nur im Spiel. In der Konsole: peakcore web <operator>");
+                return true;
+            }
+            if (permStore.webGrant(p.getUniqueId(), p.isOp()) == null) {
+                p.sendMessage(net.kyori.adventure.text.Component.text("Du hast keinen Zugang zur Web-Oberflaeche. Frag einen Admin nach einer Rolle mit Web-Zugang.", net.kyori.adventure.text.format.NamedTextColor.RED));
+                return true;
+            }
+            String link = getConfig().getBoolean("web.enabled", false) ? webBase() + "/login?t=" + webAuth.issueToken(p.getUniqueId(), p.getName()) : null;
+            if (link == null) {
+                p.sendMessage(net.kyori.adventure.text.Component.text("Die Web-Oberflaeche ist aus.", net.kyori.adventure.text.format.NamedTextColor.RED));
+                return true;
+            }
+            p.sendMessage(net.kyori.adventure.text.Component.text("[Web-Oberflaeche oeffnen]", net.kyori.adventure.text.format.NamedTextColor.GREEN)
+                    .clickEvent(net.kyori.adventure.text.event.ClickEvent.openUrl(link))
+                    .append(net.kyori.adventure.text.Component.text("  (nur fuer dich, 5 Minuten, einmal nutzbar)", net.kyori.adventure.text.format.NamedTextColor.GRAY)));
+            return true;
+        });
+        permService.start();
         getCommand("peakcore").setExecutor(command);
         getCommand("peakcore").setTabCompleter(command);
         getLogger().info("PeakCore " + version + " bereit (API " + PeakCoreApi.API_VERSION + ", Kanal " + Frame.CHANNEL + ").");
@@ -168,6 +205,7 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        if (permService != null) permService.stop();
         if (webHub != null) webHub.closeAll();
         if (webAuth != null) webAuth.clear();
         if (web != null) web.stop();
@@ -217,3 +255,4 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
         }
     }
 }
+

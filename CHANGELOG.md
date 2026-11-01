@@ -38,3 +38,5 @@
 - Web: neue Oberflaeche mit Kopfleiste, Pixel-Landschaft mit Parallaxe und Tag/Nacht.
 
 - Web: Willkommensseite mit Beschreibung und Sprachwahl (DE/EN/FR/ES fuer den Rahmen), Reiter Server und Module, animiertes TexturePeak-Logo, lebendigere Optik.
+
+- Spieler-Reiter: Rollen, Rechte je Modul, Notizen, Verwarnungen/Sperren, Web-Zugang ohne OP per /peakweb, Sitzung an die IP gebunden.

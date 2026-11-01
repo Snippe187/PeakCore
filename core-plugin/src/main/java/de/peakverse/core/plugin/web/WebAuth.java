@@ -17,18 +17,29 @@ public final class WebAuth {
     public static final long SESSION_TTL_MS = 8 * 3_600_000L;
     public static final int MAX_FAILURES_PER_MINUTE = 10;
 
-    public record Session(String id, UUID player, String name, long expires) { }
+    public record Session(String id, UUID player, String name, long expires, String ip) { }
 
     private record Token(UUID player, String name, long expires) { }
 
     private final LongSupplier clock;
+    private final long sessionTtlMs;
     private final SecureRandom random = new SecureRandom();
     private final Map<String, Token> tokens = new HashMap<>();
     private final Map<String, Session> sessions = new HashMap<>();
     private final Map<String, long[]> failures = new HashMap<>(); // ip -> {Fensterstart, Anzahl}
 
     public WebAuth(LongSupplier clock) {
+        this(clock, SESSION_TTL_MS);
+    }
+
+    /** Mit eigener Sitzungsdauer (config web.session-hours). */
+    public WebAuth(LongSupplier clock, long sessionTtlMs) {
         this.clock = clock;
+        this.sessionTtlMs = Math.max(60_000L, sessionTtlMs);
+    }
+
+    public long sessionTtlMs() {
+        return sessionTtlMs;
     }
 
     private String randomId() {
@@ -54,7 +65,7 @@ public final class WebAuth {
             failure(ip);
             return Optional.empty();
         }
-        Session s = new Session(randomId(), t.player(), t.name(), clock.getAsLong() + SESSION_TTL_MS);
+        Session s = new Session(randomId(), t.player(), t.name(), clock.getAsLong() + sessionTtlMs, ip);
         sessions.put(s.id(), s);
         return Optional.of(s);
     }
@@ -110,3 +121,4 @@ public final class WebAuth {
         failures.values().removeIf(f -> now - f[0] >= 60_000L);
     }
 }
+

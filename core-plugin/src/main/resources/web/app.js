@@ -1,8 +1,8 @@
-﻿// PeakVerse Web-Oberflaeche: Rahmen. Module liefern ihre Seite als JS-Modul (/m/<id>/panel.js) mit "export default function mount(root, ctx)".
+// PeakVerse Web-Oberflaeche: Rahmen. Module liefern ihre Seite als JS-Modul (/m/<id>/panel.js) mit "export default function mount(root, ctx)".
 // Der Rahmen (Menue, Startseite, Server, Module) ist in Deutsch, Englisch, Franzoesisch und Spanisch; die Seiten der Module bisher nur Deutsch/Englisch.
 const LANGS = [['de', 'Deutsch'], ['en', 'English'], ['fr', 'Français'], ['es', 'Español']];
 const STR = {
-  de: { home: 'Start', server: 'Server', modules: 'Module', log: 'Protokoll', logout: 'Abmelden', hello: 'Angemeldet als', welcome: 'Willkommen',
+  de: { home: 'Start', server: 'Server', modules: 'Module', players: 'Spieler', log: 'Protokoll', logout: 'Abmelden', hello: 'Angemeldet als', welcome: 'Willkommen',
     th_day: 'Tag', th_night: 'Nacht', pickLang: 'Sprache wählen', ctaServer: 'Server verwalten', ctaModules: 'Module ansehen',
     tag1: 'Texturen zeichnen, die jeder sofort sieht.', tag2: 'Sounds, Packs und Fähigkeiten an einem Ort.', tag3: 'Dein Server, deine Regeln, live aktualisiert.',
     aboutT: 'Was ist PeakVerse?', aboutP: 'PeakVerse ist die Verwaltung für deinen Minecraft-Server. Du gestaltest Texturen, Sounds und das Server-Pack bequem im Browser. Spieler mit der Mod bekommen jede Änderung sofort, ohne neu beizutreten.',
@@ -18,7 +18,7 @@ const STR = {
     noLog: 'Noch nichts protokolliert.', conflict: 'Konflikt', conflictText: 'Ein anderer Administrator hat inzwischen etwas geaendert', overwrite: 'Trotzdem speichern', cancel: 'Abbrechen',
     reload: 'Neu laden', needLogin: 'Nicht angemeldet', needLoginText: 'Gib im Spiel /peakcore web ein und oeffne den Link.', changedBy: 'hat etwas geaendert in', saved: 'Gespeichert',
     error: 'Fehler', live: 'Live verbunden', offline: 'Verbindung verloren, versuche neu...', ok: 'OK', yes: 'Ja', confirmT: 'Sicher?' },
-  en: { home: 'Home', server: 'Server', modules: 'Modules', log: 'Log', logout: 'Log out', hello: 'Signed in as', welcome: 'Welcome',
+  en: { home: 'Home', server: 'Server', modules: 'Modules', players: 'Players', log: 'Log', logout: 'Log out', hello: 'Signed in as', welcome: 'Welcome',
     th_day: 'Day', th_night: 'Night', pickLang: 'Choose your language', ctaServer: 'Manage server', ctaModules: 'Browse modules',
     tag1: 'Draw textures everyone sees instantly.', tag2: 'Sounds, packs and abilities in one place.', tag3: 'Your server, your rules, updated live.',
     aboutT: 'What is PeakVerse?', aboutP: 'PeakVerse is the control center for your Minecraft server. Design textures, sounds and the server pack right in your browser. Players with the mod get every change instantly, without rejoining.',
@@ -34,13 +34,13 @@ const STR = {
     noLog: 'Nothing logged yet.', conflict: 'Conflict', conflictText: 'Another administrator has changed something in the meantime', overwrite: 'Save anyway', cancel: 'Cancel',
     reload: 'Reload', needLogin: 'Not signed in', needLoginText: 'Type /peakcore web in the game and open the link.', changedBy: 'changed something in', saved: 'Saved',
     error: 'Error', live: 'Live connected', offline: 'Connection lost, retrying...', ok: 'OK', yes: 'Yes', confirmT: 'Are you sure?' },
-  fr: { home: 'Accueil', server: 'Serveur', modules: 'Modules', log: 'Journal', logout: 'Déconnexion', hello: 'Connecté en tant que', welcome: 'Bienvenue',
+  fr: { home: 'Accueil', server: 'Serveur', modules: 'Modules', players: 'Joueurs', log: 'Journal', logout: 'Déconnexion', hello: 'Connecté en tant que', welcome: 'Bienvenue',
     th_day: 'Jour', th_night: 'Nuit', pickLang: 'Choisis ta langue', ctaServer: 'Gérer le serveur', ctaModules: 'Voir les modules',
     tag1: 'Dessine des textures que tout le monde voit tout de suite.', tag2: 'Sons, packs et capacités au même endroit.', tag3: 'Ton serveur, tes règles, mis à jour en direct.',
     aboutT: "Qu'est-ce que PeakVerse ?", aboutP: "PeakVerse est le centre de contrôle de ton serveur Minecraft. Crée textures, sons et pack serveur dans ton navigateur. Les joueurs avec le mod reçoivent chaque changement tout de suite, sans se reconnecter.",
     howT: 'Comment ça marche', s1T: 'Connexion', s1P: 'Tape /peakcore web en jeu et clique sur le lien.', s2T: 'Créer', s2P: 'Dessine des textures, envoie des fichiers, règle les capacités.', s3T: 'Publier', s3P: 'Le pack est construit et arrive tout de suite chez les joueurs.',
     srvT: 'Ton serveur', srvSub: "L'état et les outils en un coup d'œil.", modT: 'Modules', open: 'Ouvrir', planned: 'Prévu', soon: 'Bientôt', saved: 'Enregistré', cancel: 'Annuler', yes: 'Oui', error: 'Erreur' },
-  es: { home: 'Inicio', server: 'Servidor', modules: 'Módulos', log: 'Registro', logout: 'Cerrar sesión', hello: 'Sesión de', welcome: 'Bienvenido',
+  es: { home: 'Inicio', server: 'Servidor', modules: 'Módulos', players: 'Jugadores', log: 'Registro', logout: 'Cerrar sesión', hello: 'Sesión de', welcome: 'Bienvenido',
     th_day: 'Día', th_night: 'Noche', pickLang: 'Elige tu idioma', ctaServer: 'Gestionar servidor', ctaModules: 'Ver módulos',
     tag1: 'Dibuja texturas que todos ven al instante.', tag2: 'Sonidos, packs y habilidades en un solo lugar.', tag3: 'Tu servidor, tus reglas, actualizado en vivo.',
     aboutT: '¿Qué es PeakVerse?', aboutP: 'PeakVerse es el centro de control de tu servidor de Minecraft. Crea texturas, sonidos y el pack del servidor desde el navegador. Los jugadores con el mod reciben cada cambio al instante, sin volver a entrar.',
@@ -135,7 +135,7 @@ function needLogin() {
 }
 
 // ---- Module: Beschreibung und animiertes Logo ----
-const CORE_TOOLS = ['pack', 'areas'];
+const CORE_TOOLS = ['pack', 'areas', 'players'];
 const DESC = {
   texturepeak: { de: 'Eigene Texturen für Gegenstände: Pixel-Editor, Standard-Bilder zum Kopieren und Ändern, Fähigkeiten und ein Archiv.', en: 'Custom item textures: pixel editor, default images to copy or modify, abilities and an archive.' },
   pack: { de: 'Das Server-Pack: Status, Testmodus mit Testern, Freigabe für alle und Zurückrollen.', en: 'The server pack: status, test mode with testers, release to everyone and rollback.' },
@@ -199,13 +199,13 @@ function applyPrefs() {
 }
 
 // Reiter oben: Start, Server, Module, Protokoll. Die Seiten der Module haengen unter "Server" (Pack, Bereiche) oder "Module".
-const parentOf = id => CORE_TOOLS.includes(id) ? 'server' : ['home', 'server', 'modules', 'log'].includes(id) ? id : 'modules';
+const parentOf = id => id === 'players' ? 'players' : CORE_TOOLS.includes(id) ? 'server' : ['home', 'server', 'modules', 'log'].includes(id) ? id : 'modules';
 function buildNav() {
-  const items = [['home', t('home')], ['server', t('server')], ['modules', t('modules')], ['log', t('log')]];
+  const items = [['home', t('home')], ['server', t('server')], ['modules', t('modules')], ...(S.modules.some(m => m.id === 'players') ? [['players', t('players')]] : []), ['log', t('log')]];
   $('#nav').replaceChildren(...items.map(([id, label]) => h('a', { 'data-id': id, class: parentOf(S.current) === id ? 'on' : '', onclick: () => go(id) }, label)));
   const crumb = $('#crumb');
   const m = S.modules.find(x => x.id === S.current);
-  if (m) crumb.replaceChildren(h('a', { class: 'crumb-a', onclick: () => go(parentOf(m.id)) }, '← ' + t(parentOf(m.id))), h('span', { class: 'crumb-logo' }, logoFor(m.id, 26)), h('b', {}, modTitle(m)));
+  if (m && parentOf(m.id) !== m.id) crumb.replaceChildren(h('a', { class: 'crumb-a', onclick: () => go(parentOf(m.id)) }, '← ' + t(parentOf(m.id))), h('span', { class: 'crumb-logo' }, logoFor(m.id, 26)), h('b', {}, modTitle(m)));
   else crumb.replaceChildren();
 }
 
@@ -300,7 +300,7 @@ async function serverPage(view) {
   try { st = await api('/api/pack/status', {}, 'pack'); } catch { /* Pack-Modul aus */ }
   try { log = await api('/api/log?n=6'); } catch { /* egal */ }
   const chip = (txt, kind = '') => h('span', { class: 'chip ' + kind }, txt);
-  const tools = S.modules.filter(m => CORE_TOOLS.includes(m.id));
+  const tools = S.modules.filter(m => CORE_TOOLS.includes(m.id) && m.id !== 'players');
   view.append(
     h('section', { class: 'srv-head reveal' },
       h('div', { class: 'rack' }, [0, 1, 2].map(i => h('div', { class: 'unit' }, h('i', { style: 'animation-delay:' + (i * .4) + 's' }), h('i', { style: 'animation-delay:' + (i * .4 + .2) + 's' }), h('em', {})))),
