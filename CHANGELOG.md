@@ -36,3 +36,5 @@
 
 - Mod: ein geaendertes Server-Pack wird sofort aktiv, kein erneutes Beitreten noetig (F3+T als Reserve).
 - Web: neue Oberflaeche mit Kopfleiste, Pixel-Landschaft mit Parallaxe und Tag/Nacht.
+
+- Web: Willkommensseite mit Beschreibung und Sprachwahl (DE/EN/FR/ES fuer den Rahmen), Reiter Server und Module, animiertes TexturePeak-Logo, lebendigere Optik.
