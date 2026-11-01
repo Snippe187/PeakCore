@@ -84,3 +84,7 @@ PeakCoreSession.whenReady(session -> {
 Beim Beitritt schickt die Mod `Hello` (mit allen angemeldeten Modulen), sobald der Server den Kanal meldet, und wiederholt es alle 2 Sekunden bis zu 10-mal. Kennt der Server den Kanal nach 10 Sekunden nicht (kein PeakCore), bleibt die Mod still. Client-Befehl `/peakcorestatus` zeigt den Zustand.
 
 Dev-Client: `./gradlew :core-mod:runClient` verbindet als `PeakDev` mit `localhost:25565` und meldet das Test-Modul `probe` an (Gegenstueck zu `examples/probe-module`).
+
+## Lizenz
+
+GPL-3.0 (siehe [LICENSE](LICENSE)). Copyright (C) 2026 PeakVerse-Mitwirkende.
