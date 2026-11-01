@@ -20,7 +20,7 @@ import java.util.zip.ZipFile;
 public final class PackBase {
     static final int MAX_ENTRIES = 20_000;
     static final long MAX_ENTRY_BYTES = 64L * 1024 * 1024;
-    static final long MAX_TOTAL_BYTES = 200L * 1024 * 1024;
+    static final long MAX_TOTAL_BYTES = 250L * 1024 * 1024;
 
     /** @param skipped Dateien, die nicht uebernommen wurden (mit Grund, die ersten 20) */
     public record Loaded(Map<String, byte[]> files, byte[] icon, List<String> skipped) {}

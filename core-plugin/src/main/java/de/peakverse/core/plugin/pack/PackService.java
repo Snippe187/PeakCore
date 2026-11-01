@@ -257,6 +257,20 @@ public final class PackService {
 
     // ---- Abfragen ----
 
+    /** Welche Datei welches Modul zum Pack beitraegt (Pfad -> Modul-ID), fuer die Konflikt-Anzeige der Bibliothek. Nur auf dem Haupt-Thread aufrufen. */
+    public synchronized Map<String, String> contributedPaths() {
+        Map<String, String> out = new TreeMap<>();
+        for (PeakModule module : runningModules.get()) {
+            PackAssembler mine = new PackAssembler();
+            try {
+                module.contributePack(mine.sinkFor(module.id()));
+            } catch (Throwable t) {
+                continue;
+            }
+            for (String path : mine.files().keySet()) out.putIfAbsent(path, module.id());
+        }
+        return out;
+    }
     /** Das Ergebnis des letzten Baus oder {@code null}. */
     public Status status() {
         return last;

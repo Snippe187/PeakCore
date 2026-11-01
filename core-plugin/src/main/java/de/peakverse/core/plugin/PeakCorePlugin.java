@@ -161,7 +161,7 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
                 new PackWeb(webHost.registry("pack"), packs, sender, web, getDataFolder().toPath().resolve("pack"), getDataFolder().toPath().resolve("base-pack.zip"), getDataFolder().toPath().resolve("pack-files"), file -> {
                     getConfig().set("pack.base-file", file);
                     saveConfig();
-                }).register(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8), webHost.registry("areas"), new String(in2.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+                }, packLibrary(), () -> getConfig().getString("pack.base-file", ""), () -> getConfig().getInt("pack.format-major", 88), getDataFolder().toPath()).register(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8), webHost.registry("areas"), new String(in2.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
             } catch (java.io.IOException | RuntimeException e) {
                 getLogger().log(Level.SEVERE, "Die Pack-Seite der Web-Oberflaeche konnte nicht angelegt werden", e);
             }
@@ -249,6 +249,16 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
                 getLogger().log(java.util.logging.Level.SEVERE, "Pack konnte nicht gebaut werden", e);
             }
         }
+    }
+
+    private de.peakverse.core.plugin.pack.PackLibrary library;
+
+    private de.peakverse.core.plugin.pack.PackLibrary packLibrary() {
+        if (library == null) {
+            library = new de.peakverse.core.plugin.pack.PackLibrary(getDataFolder().toPath().resolve("pack-library"), System::currentTimeMillis, getLogger());
+            library.load();
+        }
+        return library;
     }
 
     /** {@code /peakweb devices} zeigt die gekoppelten Geraete, {@code /peakweb revoke <id>} sperrt eines. Spieler sehen nur ihre eigenen, Operatoren und die Konsole alle. */

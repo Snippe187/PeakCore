@@ -7,6 +7,7 @@ import de.peakverse.core.api.web.WebRegistry;
 import de.peakverse.core.api.web.WebResponse;
 import de.peakverse.core.plugin.pack.PackBase;
 import de.peakverse.core.plugin.pack.PackCustom;
+import de.peakverse.core.plugin.pack.PackLibrary;
 import de.peakverse.core.plugin.pack.PackService;
 import de.peakverse.core.plugin.pack.PackState;
 import de.peakverse.core.plugin.pack.PackWebServer;
@@ -16,8 +17,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Enumeration;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.bukkit.Bukkit;
@@ -41,8 +45,17 @@ final class PackWeb {
     private final Consumer<String> setBaseFile;
 
     private final Path customDir;
+    private final PackLibrary library;
+    private final Supplier<String> baseFile;
+    private final IntSupplier serverFormat;
+    private final Path dataFolder;
 
-    PackWeb(WebRegistry web, PackService packs, PackSender sender, PackWebServer server, Path packFolder, Path baseTarget, Path customDir, Consumer<String> setBaseFile) {
+    PackWeb(WebRegistry web, PackService packs, PackSender sender, PackWebServer server, Path packFolder, Path baseTarget, Path customDir, Consumer<String> setBaseFile,
+            PackLibrary library, Supplier<String> baseFile, IntSupplier serverFormat, Path dataFolder) {
+        this.library = library;
+        this.baseFile = baseFile;
+        this.serverFormat = serverFormat;
+        this.dataFolder = dataFolder;
         this.customDir = customDir;
         this.web = web;
         this.packs = packs;
@@ -153,6 +166,162 @@ final class PackWeb {
                 if (sender.enabled() && sender.currentUrl() != null) sender.sendAll(Bukkit.getOnlinePlayers());
             });
         });
+        registerLibrary();
+    }
+
+    // ---- Pack-Bibliothek: mehrere Packs, eines davon ist das Server-Pack ----
+
+    private static final String LIB_PREFIX = "pack-library/";
+
+    private void registerLibrary() {
+        migrateLegacyBase();
+        web.route("library", r -> {
+            if (!r.method().equals("GET")) return WebResponse.error(405, "GET");
+            return WebResponse.json(libraryJson());
+        });
+        web.route("library/begin", r -> {
+            if (!r.method().equals("POST")) return WebResponse.error(405, "POST");
+            JsonObject o = GSON.fromJson(r.text(), JsonObject.class);
+            String id = library.beginUpload(o.get("name").getAsString(), o.get("size").getAsLong());
+            JsonObject out = new JsonObject();
+            out.addProperty("id", id);
+            out.addProperty("chunk", PackLibrary.MAX_CHUNK - 64 * 1024);
+            return WebResponse.json(GSON.toJson(out));
+        });
+        web.route("library/chunk", r -> {
+            if (!r.method().equals("POST")) return WebResponse.error(405, "POST");
+            String id = r.query().get("id");
+            int n;
+            try {
+                n = Integer.parseInt(r.query().get("n"));
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Stueck-Nummer fehlt");
+            }
+            library.chunk(id == null ? "" : id, n, r.body());
+            return WebResponse.ok();
+        });
+        web.route("library/abort", r -> {
+            JsonObject o = GSON.fromJson(r.text(), JsonObject.class);
+            library.abort(o.get("id").getAsString());
+            return WebResponse.ok();
+        });
+        web.route("library/finish", r -> {
+            if (!r.method().equals("POST")) return WebResponse.error(405, "POST");
+            JsonObject o = GSON.fromJson(r.text(), JsonObject.class);
+            PackLibrary.Entry e = library.finish(o.get("id").getAsString());
+            web.log(r.admin(), "Pack in die Bibliothek hochgeladen: " + e.name + " (" + e.size + " Bytes)");
+            web.changed("pack", r.admin());
+            return WebResponse.json(libraryJson());
+        });
+        web.route("library/*", r -> {
+            String[] p = r.path().split("/");
+            if (p.length < 2) return WebResponse.error(404, "Unbekannte Adresse");
+            String id = p[1];
+            String action = p.length > 2 ? p[2] : "";
+            PackLibrary.Entry e = library.get(id);
+            if (e == null) return WebResponse.error(404, "Dieses Pack gibt es nicht.");
+            switch (r.method() + " " + action) {
+                case "GET icon" -> {
+                    byte[] icon = library.icon(id);
+                    return icon == null ? WebResponse.error(404, "Kein Vorschaubild") : WebResponse.bytes("image/png", icon);
+                }
+                case "GET download" -> {
+                    if (e.size > MAX_DOWNLOAD) return WebResponse.error(413, "Das Pack ist zu gross fuer den Download im Browser (ueber " + MAX_DOWNLOAD / 1024 / 1024 + " MB). Die Datei liegt in plugins/PeakCore/pack-library/" + id + ".zip");
+                    return WebResponse.bytes("application/zip", Files.readAllBytes(library.zipPath(id)));
+                }
+                case "GET conflicts" -> {
+                    Map<String, String> mine = web.onMain(packs::contributedPaths);
+                    var list = library.conflicts(id, mine, 200);
+                    JsonArray a = new JsonArray();
+                    for (String[] c : list) {
+                        JsonObject j = new JsonObject();
+                        j.addProperty("path", c[0]);
+                        j.addProperty("owner", c[1]);
+                        a.add(j);
+                    }
+                    return WebResponse.json(GSON.toJson(a));
+                }
+                case "POST rename" -> {
+                    JsonObject o = GSON.fromJson(r.text(), JsonObject.class);
+                    library.rename(id, o.get("name").getAsString(), o.has("note") ? o.get("note").getAsString() : "");
+                    web.log(r.admin(), "Pack umbenannt: " + o.get("name").getAsString());
+                    web.changed("pack", r.admin());
+                    return WebResponse.json(libraryJson());
+                }
+                case "POST activate" -> {
+                    return activate(r.admin(), e);
+                }
+                case "DELETE " -> {
+                    if (id.equals(activeLibraryId())) throw new IllegalArgumentException("Das ist das aktive Server-Pack. Aktiviere zuerst ein anderes (oder entferne das Basis-Pack).");
+                    library.delete(id);
+                    web.log(r.admin(), "Pack aus der Bibliothek geloescht: " + e.name);
+                    web.changed("pack", r.admin());
+                    return WebResponse.json(libraryJson());
+                }
+                default -> {
+                    return WebResponse.error(405, "Diese Aktion gibt es nicht");
+                }
+            }
+        });
+    }
+
+    private static final long MAX_DOWNLOAD = 100L * 1024 * 1024;
+
+    /** Macht ein Pack aus der Bibliothek zum Server-Pack, baut neu und schickt es sofort an alle Spieler online. Geht beim Bauen etwas schief, bleibt das alte Pack aktiv. */
+    private WebResponse activate(String admin, PackLibrary.Entry e) throws Exception {
+        String previous = baseFile.get();
+        web.onMain(() -> {
+            setBaseFile.accept(LIB_PREFIX + e.id + ".zip");
+            try {
+                packs.rebuild();
+            } catch (IOException | RuntimeException ex) {
+                setBaseFile.accept(previous == null ? "" : previous);
+                try {
+                    packs.rebuild();
+                } catch (IOException | RuntimeException again) {
+                    // das alte Pack ging auch nicht mehr: nichts weiter zu tun
+                }
+                throw new IllegalArgumentException("Das Pack konnte nicht eingebaut werden (" + ex.getMessage() + "). Das bisherige Server-Pack bleibt aktiv.");
+            }
+            if (sender.enabled() && sender.currentUrl() != null) sender.sendAll(Bukkit.getOnlinePlayers());
+            return null;
+        });
+        web.log(admin, "Server-Pack gewechselt: " + e.name);
+        web.changed("pack", admin);
+        return WebResponse.json(libraryJson());
+    }
+
+    private String activeLibraryId() {
+        String f = baseFile.get();
+        if (f == null || !f.startsWith(LIB_PREFIX) || !f.endsWith(".zip")) return "";
+        return f.substring(LIB_PREFIX.length(), f.length() - 4);
+    }
+
+    private String libraryJson() throws IOException {
+        JsonObject o = new JsonObject();
+        o.addProperty("active", activeLibraryId());
+        o.addProperty("legacy", !baseFile.get().isBlank() && activeLibraryId().isEmpty());
+        o.addProperty("serverFormat", serverFormat.getAsInt());
+        o.addProperty("maxMb", PackLibrary.MAX_BYTES / 1024 / 1024);
+        o.addProperty("maxPacks", PackLibrary.MAX_PACKS);
+        JsonArray list = new JsonArray();
+        for (PackLibrary.Entry e : library.list()) list.add(GSON.toJsonTree(e));
+        o.add("packs", list);
+        return GSON.toJson(o);
+    }
+
+    /** Ein Basis-Pack, das vor der Bibliothek hochgeladen wurde ({@code base-pack.zip}), wird einmal in die Bibliothek uebernommen. */
+    private void migrateLegacyBase() {
+        try {
+            String f = baseFile.get();
+            if (f != null && f.equals(baseTarget.getFileName().toString()) && Files.isRegularFile(baseTarget)) {
+                PackLibrary.Entry e = library.addFile(baseTarget, "Basis-Pack (bisher).zip");
+                setBaseFile.accept(LIB_PREFIX + e.id + ".zip");
+                Files.deleteIfExists(baseTarget);
+            }
+        } catch (IOException | RuntimeException ex) {
+            // schon uebernommen (gleiche Pruefsumme) oder nicht lesbar: das alte Verhalten bleibt, nichts geht verloren
+        }
     }
 
     /** Zieldatei im Ordner der eigenen Dateien; nie ausserhalb davon. */
@@ -222,7 +391,8 @@ final class PackWeb {
             url = null;
         }
         o.addProperty("url", url);
-        o.addProperty("hasBase", Files.isRegularFile(baseTarget));
+        String activeFile = baseFile.get();
+        o.addProperty("hasBase", activeFile != null && !activeFile.isBlank() && Files.isRegularFile(dataFolder.resolve(activeFile)));
         JsonArray variants = new JsonArray();
         for (String v : PackState.VARIANTS) {
             JsonObject j = new JsonObject();

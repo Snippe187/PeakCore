@@ -14,7 +14,7 @@ import java.util.TreeMap;
  * <ul>
  *   <li>Reihenfolge: Basis-Pack, dann die Module nach ID sortiert. Damit ist das Ergebnis unabhaengig von der Lade-Reihenfolge.</li>
  *   <li>Dieselbe Datei mit gleichem Inhalt: kein Konflikt. Zusammenfuehrbare JSON-Dateien (siehe {@link JsonMerge}) werden vereinigt.</li>
- *   <li>Konflikt mit dem <b>Basis-Pack</b>: das Basis-Pack gewinnt, nur diese Datei des Moduls entfaellt.</li>
+ *   <li>Konflikt mit dem <b>Basis-Pack</b>: die Datei des Moduls gewinnt (damit seine Gegenstaende funktionieren), im Problem-Text steht, wie viele Dateien das waren.</li>
  *   <li>Konflikt mit einem <b>anderen Modul</b>: das spaetere Modul entfaellt ganz (alles oder nichts), damit kein Modul halb im Pack steckt.</li>
  * </ul>
  */
@@ -65,6 +65,7 @@ public final class PackMerger {
             int accepted = 0;
             int mergedHere = 0;
             Problem fatal = null;
+            List<String> overridden = new ArrayList<>();
 
             for (Map.Entry<String, byte[]> e : new TreeMap<>(c.files()).entrySet()) {
                 String path = e.getKey();
@@ -91,7 +92,11 @@ public final class PackMerger {
                     accepted++;
                     mergedHere++;
                 } else if (who.equals(Set.of(BASE))) {
-                    mine.add(new Problem(c.owner(), path, "Basis-Pack gewinnt: " + String.join("; ", r.conflicts()), false));
+                    // Die Textur des Moduls gewinnt, damit seine Gegenstaende funktionieren; die Datei des Basis-Packs wird fuer diesen Pfad ersetzt
+                    work.put(path, data);
+                    workOwners.put(path, new HashSet<>(Set.of(c.owner())));
+                    accepted++;
+                    overridden.add(path);
                 } else {
                     fatal = new Problem(c.owner(), path, String.join("; ", r.conflicts()) + " [" + describe(who) + "]", true);
                     break;
@@ -104,6 +109,10 @@ public final class PackMerger {
             }
             files = work;
             owners = workOwners;
+            if (!overridden.isEmpty()) {
+                mine.add(new Problem(c.owner(), overridden.get(0), "ersetzt " + overridden.size() + " Datei(en) aus dem Basis-Pack (Textur des Moduls gewinnt)"
+                        + (overridden.size() > 1 ? ", z. B. " + overridden.get(1) : ""), false));
+            }
             problems.addAll(mine);
             merged += mergedHere;
             if (accepted > 0) counts.put(c.owner(), accepted);

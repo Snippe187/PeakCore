@@ -81,8 +81,8 @@ class PackMergeTest {
         PackMerger.Result clash = PackMerger.merge(Map.of(path, b("{\"variants\":{\"note=0\":{\"model\":\"a\"}}}")),
                 List.of(c("mod", path, "{\"variants\":{\"note=0\":{\"model\":\"other\"}}}")));
         assertEquals(1, clash.problems().size());
-        assertTrue(clash.problems().get(0).detail().contains("note=0"), clash.problems().get(0).detail());
-        assertTrue(sameJson("{\"variants\":{\"note=0\":{\"model\":\"a\"}}}", clash.files().get(path)), "Basis-Pack gewinnt");
+        assertTrue(clash.problems().get(0).detail().contains("ersetzt 1 Datei"), clash.problems().get(0).detail());
+        assertTrue(sameJson("{\"variants\":{\"note=0\":{\"model\":\"other\"}}}", clash.files().get(path)), "die Textur des Moduls gewinnt");
         assertFalse(clash.problems().get(0).whole());
     }
 
@@ -131,10 +131,10 @@ class PackMergeTest {
     }
 
     @Test
-    void itemSameCaseWithOtherModelConflicts() {
+    void itemSameCaseWithOtherModelTakesTheModulesModel() {
         PackMerger.Result r = PackMerger.merge(Map.of(ITEM, b(select(sel("a", "m:a")))), List.of(c("mod", ITEM, select(sel("a", "m:other")))));
         assertEquals(1, r.problems().size());
-        assertTrue(sameJson(select(sel("a", "m:a")), r.files().get(ITEM)));
+        assertTrue(sameJson(select(sel("a", "m:other")), r.files().get(ITEM)));
     }
 
     @Test
@@ -173,14 +173,15 @@ class PackMergeTest {
     }
 
     @Test
-    void nonMergeableCollisionWithBaseKeepsBaseAndDropsOnlyThatFile() {
+    void nonMergeableCollisionWithBaseLetsTheModuleWin() {
         PackMerger.Result r = PackMerger.merge(Map.of("assets/x/textures/a.png", new byte[] {1}),
                 List.of(new PackMerger.Contribution("mod", Map.of("assets/x/textures/a.png", new byte[] {9}, "assets/x/textures/own.png", new byte[] {5}))));
-        assertArrayEquals(new byte[] {1}, r.files().get("assets/x/textures/a.png"));
+        assertArrayEquals(new byte[] {9}, r.files().get("assets/x/textures/a.png"));
         assertArrayEquals(new byte[] {5}, r.files().get("assets/x/textures/own.png"));
         assertEquals(1, r.problems().size());
+        assertTrue(r.problems().get(0).detail().contains("ersetzt 1 Datei"));
         assertFalse(r.problems().get(0).whole());
-        assertEquals(Map.of("mod", 1), r.filesByOwner());
+        assertEquals(Map.of("mod", 2), r.filesByOwner());
     }
 
     @Test

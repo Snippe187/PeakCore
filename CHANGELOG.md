@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2 (in Arbeit)
+- **Handy verbinden**: Auf der Anmeldeseite den Minecraft-Namen eingeben, im Spiel kommt eine Nachricht mit Code und [Erlauben]/[Ablehnen]; danach bleibt das Geraet dauerhaft angemeldet (Schluessel nur als Pruefsumme gespeichert, `devices.json`). Karte "Verbundene Geraete" auf der Server-Seite zum Sperren, im Spiel `/peakweb devices` und `/peakweb revoke <id>`. Wer kein Operator mehr ist und keine Rolle mit Web-Zugang hat, verliert alle Geraete. Config `web.remote-login`, `web.device-expire-days`
+- **Pack-Bibliothek**: mehrere fertige Resource-Packs (ZIP bis 250 MB, in Stuecken hochgeladen) in `plugins/PeakCore/pack-library/`, Karten mit Vorschaubild, Format, Groesse und Notiz, eines davon ist das Server-Pack; Wechsel schickt es sofort an alle Spieler online. Pruefung beim Hochladen (Aufbau, pack.mcmeta, Grenzen), automatische Reparatur bei Unterordner oder Windows-Pfaden mit `\`, Anzeige von Ueberschneidungen mit den Modul-Texturen, Umbenennen, Herunterladen (bis 100 MB), Loeschen. Ein bisheriges `base-pack.zip` wird automatisch uebernommen
+- **Aenderung**: Bei gleichen Dateien gewinnt jetzt die Textur des Moduls (TexturePeak, PeakSound) gegen das Basis-Pack, damit die Gegenstaende funktionieren (vorher gewann das Basis-Pack)
+
 ## 0.1.1
 - Mod-Update: die Mods suchen beim Start im Release-Repo nach neueren `*-Mod-<Version>.jar` (mit `.sha256`), melden es beim Beitritt, `/peakcoreupdate` laedt sie, getauscht wird beim Beenden des Spiels (`ModUpdater`, `config/peakcore/mod-update.properties`)
 - Web-Oberflaeche: Klickt man weiter, waehrend eine Seite noch laedt, springt die alte nicht mehr ueber die neue zurueck
