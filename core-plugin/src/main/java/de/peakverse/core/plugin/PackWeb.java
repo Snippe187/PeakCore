@@ -33,7 +33,7 @@ import org.bukkit.OfflinePlayer;
  */
 final class PackWeb {
     private static final Gson GSON = new Gson();
-    private static final int MAX_FILES_LISTED = 5000;
+    private static final int MAX_FILES_LISTED = 30000;
     private static final long MAX_PREVIEW = 16L * 1024 * 1024;
 
     private final WebRegistry web;

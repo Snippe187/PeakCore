@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.1.3 (in Arbeit)
+- Pack-Seite: die Dateiliste des Packs zeigt bis zu 30000 Dateien (vorher 5000), damit grosse Packs im Texturen-Inventar vollstaendig erscheinen
 - Basis-Pack/Bibliothek: **Overlays** (z. B. bei Vanilla-Tweaks-Packs: overlay_84_88/...) werden jetzt uebernommen: ihre Ordner kommen ins fertige Pack und die overlays-Eintraege in die pack.mcmeta; Ordner, die nicht in der mcmeta des Packs stehen, bleiben draussen. Lose Dateien im Hauptordner (Lizenz, Liesmich, Auswahl-Liste) erzeugen keine rote Meldung mehr
 
 ## 0.1.2 (in Arbeit)
