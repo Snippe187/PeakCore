@@ -84,7 +84,19 @@ final class HandshakeService<P> {
         }
         switch (packet) {
             case CorePacket.Hello hello -> onHello(player, id, hello);
+            // Tunnel-Pakete nur von Spielern mit abgeschlossenem Handshake
+            default -> {
+                java.util.function.BiConsumer<P, CorePacket.Serverbound> handler = tunnelHandler;
+                if (handler != null && modded.contains(id) && lastAdmin.containsKey(id)) handler.accept(player, packet);
+            }
         }
+    }
+
+    private volatile java.util.function.BiConsumer<P, CorePacket.Serverbound> tunnelHandler;
+
+    /** Empfaenger der Tunnel-Pakete (Web-Oberflaeche ueber die Mod). */
+    void setTunnelHandler(java.util.function.BiConsumer<P, CorePacket.Serverbound> handler) {
+        this.tunnelHandler = handler;
     }
 
     private void onHello(P player, UUID id, CorePacket.Hello hello) {

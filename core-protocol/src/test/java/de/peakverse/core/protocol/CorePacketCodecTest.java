@@ -64,6 +64,40 @@ class CorePacketCodecTest {
     }
 
     @Test
+    void tunnelPacketsRoundTripInTheRightDirection() {
+        byte[] data = {1, 2, 3, (byte) 0xFF};
+        List<CorePacket.Serverbound> up = List.of(new CorePacket.TunnelLoginRequest(), new CorePacket.TunnelOpen(5), new CorePacket.TunnelUp(5, data),
+                new CorePacket.TunnelEnd(5));
+        for (CorePacket.Serverbound p : up) {
+            CorePacket.Serverbound back = CorePacketCodec.decodeServerbound(CorePacketCodec.encode(p));
+            assertEquals(p.getClass(), back.getClass());
+            assertThrows(MalformedFrameException.class, () -> CorePacketCodec.decodeClientbound(CorePacketCodec.encode(p)), "nur zum Server");
+        }
+        assertArrayEquals(data, ((CorePacket.TunnelUp) CorePacketCodec.decodeServerbound(CorePacketCodec.encode(new CorePacket.TunnelUp(9, data)))).data());
+        assertEquals(9, ((CorePacket.TunnelOpen) CorePacketCodec.decodeServerbound(CorePacketCodec.encode(new CorePacket.TunnelOpen(9)))).conn());
+        assertEquals(new CorePacket.TunnelLogin("/login?t=abc"), CorePacketCodec.decodeClientbound(CorePacketCodec.encode(new CorePacket.TunnelLogin("/login?t=abc"))));
+        assertEquals(new CorePacket.TunnelLogin(""), CorePacketCodec.decodeClientbound(CorePacketCodec.encode(new CorePacket.TunnelLogin(""))));
+        assertEquals(new CorePacket.TunnelClosed(-3), CorePacketCodec.decodeClientbound(CorePacketCodec.encode(new CorePacket.TunnelClosed(-3))));
+        CorePacket.TunnelDown down = (CorePacket.TunnelDown) CorePacketCodec.decodeClientbound(CorePacketCodec.encode(new CorePacket.TunnelDown(2, data)));
+        assertArrayEquals(data, down.data());
+        assertThrows(MalformedFrameException.class, () -> CorePacketCodec.decodeServerbound(CorePacketCodec.encode(new CorePacket.TunnelDown(2, data))), "nur zur Mod");
+    }
+
+    @Test
+    void tunnelPacketsRejectBadSizesAndTrailingBytes() {
+        assertThrows(IllegalArgumentException.class, () -> new CorePacket.TunnelUp(1, new byte[CoreProtocol.TUNNEL_MAX_UP + 1]));
+        assertThrows(IllegalArgumentException.class, () -> new CorePacket.TunnelUp(1, new byte[0]));
+        assertThrows(IllegalArgumentException.class, () -> new CorePacket.TunnelDown(1, new byte[CoreProtocol.TUNNEL_MAX_DOWN + 1]));
+        new CorePacket.TunnelUp(1, new byte[CoreProtocol.TUNNEL_MAX_UP]); // genau am Limit ist erlaubt
+        // zu lange Laenge im Paket (Angriff): Laenge 1 MB, aber nur 1 Byte folgt
+        byte[] lying = {8, 0, 0, 0, 1, 0, 0x10, 0, 0, 1};
+        assertThrows(MalformedFrameException.class, () -> CorePacketCodec.decodeServerbound(lying));
+        byte[] trailing = Arrays.copyOf(CorePacketCodec.encode(new CorePacket.TunnelOpen(1)), 6);
+        assertThrows(MalformedFrameException.class, () -> CorePacketCodec.decodeServerbound(trailing));
+        assertThrows(MalformedFrameException.class, () -> CorePacketCodec.decodeServerbound(new byte[] {7, 0, 0}), "zu kurz");
+    }
+
+    @Test
     void wireFormatOfSmallPacketsIsExact() {
         assertArrayEquals(new byte[] {3, 1}, CorePacketCodec.encode(new CorePacket.AdminState(true)));
         assertArrayEquals(new byte[] {3, 0}, CorePacketCodec.encode(new CorePacket.AdminState(false)));

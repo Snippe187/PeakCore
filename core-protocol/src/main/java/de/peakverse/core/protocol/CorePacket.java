@@ -7,9 +7,44 @@ import java.util.List;
  * der Server akzeptiert nur {@link Serverbound}, die Mod nur {@link Clientbound}.
  */
 public sealed interface CorePacket {
-    sealed interface Serverbound extends CorePacket permits Hello {}
+    sealed interface Serverbound extends CorePacket permits Hello, TunnelLoginRequest, TunnelOpen, TunnelUp, TunnelEnd {}
 
-    sealed interface Clientbound extends CorePacket permits HelloAck, AdminState, PackOffer {}
+    sealed interface Clientbound extends CorePacket permits HelloAck, AdminState, PackOffer, TunnelLogin, TunnelDown, TunnelClosed {}
+
+    // ---------- Web-Tunnel: die Mod leitet den Browser ueber die Minecraft-Verbindung zur Web-Oberflaeche des Servers (kein offener Port noetig) ----------
+
+    /** Die Mod bittet um einen Einmal-Link fuer die Web-Oberflaeche. Der Server prueft den Web-Zugang selbst. */
+    record TunnelLoginRequest() implements Serverbound {}
+
+    /** Antwort darauf: Pfad mit Einmal-Schluessel (z. B. {@code /login?t=...}); leer, wenn der Spieler keinen Zugang hat oder die Web-Oberflaeche aus ist. */
+    record TunnelLogin(String path) implements Clientbound {
+        public TunnelLogin {
+            if (path == null || path.length() > CoreProtocol.MAX_URL_LENGTH) throw new IllegalArgumentException("Ungueltiger Pfad");
+        }
+    }
+
+    /** Neue Verbindung {@code conn} zur Web-Oberflaeche (die Nummer waehlt die Mod). */
+    record TunnelOpen(int conn) implements Serverbound {}
+
+    /** Bytes des Browsers an die Web-Oberflaeche. */
+    record TunnelUp(int conn, byte[] data) implements Serverbound {
+        public TunnelUp {
+            if (data == null || data.length == 0 || data.length > CoreProtocol.TUNNEL_MAX_UP) throw new IllegalArgumentException("Ungueltige Datenmenge");
+        }
+    }
+
+    /** Die Mod schliesst die Verbindung. */
+    record TunnelEnd(int conn) implements Serverbound {}
+
+    /** Bytes der Web-Oberflaeche an den Browser. */
+    record TunnelDown(int conn, byte[] data) implements Clientbound {
+        public TunnelDown {
+            if (data == null || data.length == 0 || data.length > CoreProtocol.TUNNEL_MAX_DOWN) throw new IllegalArgumentException("Ungueltige Datenmenge");
+        }
+    }
+
+    /** Der Server schliesst die Verbindung (auch: Verbindung abgelehnt oder nicht moeglich). */
+    record TunnelClosed(int conn) implements Clientbound {}
 
     /** Ein Modul, das die Mod des Spielers mitbringt. */
     record ModuleVersion(String id, String version) {

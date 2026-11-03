@@ -17,6 +17,13 @@ public final class CorePacketCodec {
     static final int ID_HELLO_ACK = 2;
     static final int ID_ADMIN_STATE = 3;
     static final int ID_PACK_OFFER = 4;
+    static final int ID_TUNNEL_LOGIN_REQUEST = 5;
+    static final int ID_TUNNEL_LOGIN = 6;
+    static final int ID_TUNNEL_OPEN = 7;
+    static final int ID_TUNNEL_UP = 8;
+    static final int ID_TUNNEL_END = 9;
+    static final int ID_TUNNEL_DOWN = 10;
+    static final int ID_TUNNEL_CLOSED = 11;
 
     private CorePacketCodec() {}
 
@@ -60,6 +67,33 @@ public final class CorePacketCodec {
                 writeString(out, o.sha1(), 40);
                 writeLong(out, o.size());
             }
+            case CorePacket.TunnelLoginRequest r -> out.write(ID_TUNNEL_LOGIN_REQUEST);
+            case CorePacket.TunnelLogin l -> {
+                out.write(ID_TUNNEL_LOGIN);
+                writeString(out, l.path(), CoreProtocol.MAX_URL_LENGTH);
+            }
+            case CorePacket.TunnelOpen o -> {
+                out.write(ID_TUNNEL_OPEN);
+                writeInt(out, o.conn());
+            }
+            case CorePacket.TunnelUp u -> {
+                out.write(ID_TUNNEL_UP);
+                writeInt(out, u.conn());
+                writeBytes(out, u.data());
+            }
+            case CorePacket.TunnelEnd e -> {
+                out.write(ID_TUNNEL_END);
+                writeInt(out, e.conn());
+            }
+            case CorePacket.TunnelDown d -> {
+                out.write(ID_TUNNEL_DOWN);
+                writeInt(out, d.conn());
+                writeBytes(out, d.data());
+            }
+            case CorePacket.TunnelClosed c -> {
+                out.write(ID_TUNNEL_CLOSED);
+                writeInt(out, c.conn());
+            }
         }
         return out.toByteArray();
     }
@@ -70,9 +104,18 @@ public final class CorePacketCodec {
         ByteBuffer in = open(payload);
         int id = in.get() & 0xFF;
         try {
-            if (id != ID_HELLO) throw new MalformedFrameException("Unerwartetes Core-Paket vom Client: " + id);
-            CorePacket.Hello hello = decodeHello(in);
-            return hello;
+            CorePacket.Serverbound packet = switch (id) {
+                case ID_HELLO -> decodeHello(in);
+                case ID_TUNNEL_LOGIN_REQUEST -> new CorePacket.TunnelLoginRequest();
+                case ID_TUNNEL_OPEN -> new CorePacket.TunnelOpen(in.getInt());
+                case ID_TUNNEL_UP -> new CorePacket.TunnelUp(in.getInt(), readBytes(in, CoreProtocol.TUNNEL_MAX_UP));
+                case ID_TUNNEL_END -> new CorePacket.TunnelEnd(in.getInt());
+                default -> throw new MalformedFrameException("Unerwartetes Core-Paket vom Client: " + id);
+            };
+            if (id != ID_HELLO) requireFullyRead(in);
+            return packet;
+        } catch (IllegalArgumentException e) {
+            throw new MalformedFrameException("Ungueltiges Paket: " + e.getMessage());
         } catch (BufferUnderflowException e) {
             throw new MalformedFrameException("Paket zu kurz");
         }
@@ -86,10 +129,15 @@ public final class CorePacketCodec {
                 case ID_HELLO_ACK -> decodeHelloAck(in);
                 case ID_ADMIN_STATE -> new CorePacket.AdminState(readBoolean(in));
                 case ID_PACK_OFFER -> decodePackOffer(in);
+                case ID_TUNNEL_LOGIN -> new CorePacket.TunnelLogin(readString(in, CoreProtocol.MAX_URL_LENGTH));
+                case ID_TUNNEL_DOWN -> new CorePacket.TunnelDown(in.getInt(), readBytes(in, CoreProtocol.TUNNEL_MAX_DOWN));
+                case ID_TUNNEL_CLOSED -> new CorePacket.TunnelClosed(in.getInt());
                 default -> throw new MalformedFrameException("Unbekanntes Core-Paket vom Server: " + id);
             };
             requireFullyRead(in);
             return packet;
+        } catch (IllegalArgumentException e) {
+            throw new MalformedFrameException("Ungueltiges Paket: " + e.getMessage());
         } catch (BufferUnderflowException e) {
             throw new MalformedFrameException("Paket zu kurz");
         }
@@ -198,6 +246,19 @@ public final class CorePacketCodec {
         out.write(bytes.length >>> 8);
         out.write(bytes.length);
         out.write(bytes, 0, bytes.length);
+    }
+
+    private static byte[] readBytes(ByteBuffer in, int max) {
+        int length = in.getInt();
+        if (length <= 0 || length > max || length > in.remaining()) throw new MalformedFrameException("Ungueltige Datenlaenge");
+        byte[] bytes = new byte[length];
+        in.get(bytes);
+        return bytes;
+    }
+
+    private static void writeBytes(ByteArrayOutputStream out, byte[] data) {
+        writeInt(out, data.length);
+        out.write(data, 0, data.length);
     }
 
     private static void writeCount(ByteArrayOutputStream out, int count) {

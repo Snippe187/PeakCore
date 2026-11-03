@@ -46,6 +46,7 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
     private PackSender sender;
     private WebAuth webAuth;
     private LiveHub webHub;
+    private TunnelService<Player> tunnel;
     private WebHost webHost;
     private DeviceStore deviceStore;
     private PairingService pairing;
@@ -70,7 +71,9 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
         CoreApiImpl api = new CoreApiImpl(version, registry, channel, handshake, env, getLogger());
         getServer().getServicesManager().register(PeakCoreApi.class, api, this, ServicePriority.Normal);
         getServer().getPluginManager().registerEvents(this, this);
-        getServer().getPluginManager().registerEvents(new PlayerListener(this, handshake), this);
+        getServer().getPluginManager().registerEvents(new PlayerListener(this, handshake, p -> {
+            if (tunnel != null) tunnel.onQuit(p);
+        }), this);
         // Der Admin-Status folgt /op und /deop: alle 2 Sekunden abgleichen, gemeldet wird nur bei Aenderungen
         Bukkit.getScheduler().runTaskTimer(this, () -> handshake.checkAdmins(Bukkit.getOnlinePlayers()), 40L, 40L);
 
@@ -95,6 +98,50 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
                 }, webBase().startsWith("https://"), version, getLogger());
         boolean webOn = getConfig().getBoolean("web.enabled", false);
         webHost.setBindIp(getConfig().getBoolean("web.bind-session-ip", true));
+        if (webOn && getConfig().getBoolean("web.tunnel", true)) {
+            tunnel = new TunnelService<>(new TunnelService.Env<Player>() {
+                @Override
+                public java.util.UUID id(Player player) {
+                    return player.getUniqueId();
+                }
+
+                @Override
+                public boolean allowed(Player player) {
+                    return permStore.webGrant(player.getUniqueId(), player.isOp()) != null;
+                }
+
+                @Override
+                public void send(Player player, de.peakverse.core.protocol.CorePacket.Clientbound packet) {
+                    // Tunnel-Threads sind nicht der Haupt-Thread: das Senden laeuft dort
+                    if (Bukkit.isPrimaryThread()) env.send(player, packet);
+                    else if (isEnabled()) Bukkit.getScheduler().runTask(PeakCorePlugin.this, () -> {
+                        if (player.isOnline()) env.send(player, packet);
+                    });
+                }
+
+                @Override
+                public String loginPath(Player player) {
+                    return "/login?t=" + webAuth.issueToken(player.getUniqueId(), player.getName());
+                }
+
+                @Override
+                public java.net.Socket connect() throws java.io.IOException {
+                    String bind = getConfig().getString("pack.web.bind", "0.0.0.0");
+                    boolean any = bind == null || bind.isBlank() || bind.equals("0.0.0.0") || bind.equals("::");
+                    java.net.InetAddress host = any ? java.net.InetAddress.getLoopbackAddress() : java.net.InetAddress.getByName(bind);
+                    java.net.Socket s = new java.net.Socket();
+                    try {
+                        s.connect(new java.net.InetSocketAddress(host, web != null && web.port() > 0 ? web.port() : getConfig().getInt("pack.web.port", 8123)), 3000);
+                    } catch (java.io.IOException e) {
+                        s.close();
+                        throw e;
+                    }
+                    s.setTcpNoDelay(true);
+                    return s;
+                }
+            }, getLogger());
+            handshake.setTunnelHandler(tunnel::onPacket);
+        }
         if (webOn && getConfig().getBoolean("web.remote-login", true)) {
             deviceStore = new DeviceStore(getDataFolder().toPath().resolve("devices.json"), System::currentTimeMillis, getLogger());
             deviceStore.load();
@@ -297,6 +344,7 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
     public void onDisable() {
         if (updates != null) updates.stop();
         if (permService != null) permService.stop();
+        if (tunnel != null) tunnel.close();
         if (webHub != null) webHub.closeAll();
         if (webAuth != null) webAuth.clear();
         if (web != null) web.stop();

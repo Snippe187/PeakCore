@@ -16,5 +16,9 @@ public final class CoreProtocol {
     /** Groesstes Pack, das die Mod laedt (wie das Limit des Basis-Packs auf dem Server). */
     public static final long MAX_PACK_SIZE = 200L * 1024 * 1024;
 
+    /** Groesste Datenmenge je Tunnel-Paket (zum Server ist die Grenze von Minecraft kleiner, ca. 32 KB). */
+    public static final int TUNNEL_MAX_UP = 16 * 1024;
+    public static final int TUNNEL_MAX_DOWN = 48 * 1024;
+
     private CoreProtocol() {}
 }

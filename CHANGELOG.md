@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.4 (in Arbeit)
+- **Web-Tunnel**: Die Mod oeffnet die Web-Oberflaeche im Browser ueber die Minecraft-Verbindung, ohne dass der Web-Port von aussen erreichbar sein muss (z. B. bei Hostern ohne Zusatzport). Taste "PeakVerse Web-Oberflaeche oeffnen" oder `/peakcoreweb`: die Mod startet einen Proxy nur auf `127.0.0.1` (nur solange man auf dem Server ist), der Server verbindet sich selbst mit seinem Web-Port. Login wie immer ueber Einmal-Link, nur fuer Spieler mit Web-Zugang; je Spieler hoechstens 24 Verbindungen. Config `web.tunnel` (Standard an). Neue Core-Pakete (Protokollversion bleibt 1; ein aelterer Server antwortet nicht, die Mod meldet das nach 6 Sekunden)
+
 ## 0.1.3 (in Arbeit)
 - Pack-Seite: die Dateiliste des Packs zeigt bis zu 30000 Dateien (vorher 5000), damit grosse Packs im Texturen-Inventar vollstaendig erscheinen
 - Basis-Pack/Bibliothek: **Overlays** (z. B. bei Vanilla-Tweaks-Packs: overlay_84_88/...) werden jetzt uebernommen: ihre Ordner kommen ins fertige Pack und die overlays-Eintraege in die pack.mcmeta; Ordner, die nicht in der mcmeta des Packs stehen, bleiben draussen. Lose Dateien im Hauptordner (Lizenz, Liesmich, Auswahl-Liste) erzeugen keine rote Meldung mehr

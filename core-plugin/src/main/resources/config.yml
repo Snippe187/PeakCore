@@ -60,6 +60,9 @@ web:
   remote-login: true
   # Ein gekoppeltes Geraet verfaellt nach so vielen Tagen ohne Benutzung. 0 = nie (nur Sperren per Web, /peakweb revoke <id> oder wenn der Spieler kein Operator mehr ist).
   device-expire-days: 0
+  # Web-Tunnel: Die Mod oeffnet die Web-Oberflaeche im Browser ueber die Minecraft-Verbindung (Taste oder /peakcoreweb), ohne dass der Web-Port
+  # von aussen erreichbar sein muss. Der Server verbindet sich dafuer selbst mit seinem Web-Port (pack.web.port). Nur Spieler mit Web-Zugang.
+  tunnel: true
 
 # Eingebaute Module. Ein ausgeschaltetes Modul wird nicht gestartet (nach Aenderung den Server neu starten).
 # Seine Daten bleiben unberuehrt liegen.

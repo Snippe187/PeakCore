@@ -14,9 +14,12 @@ final class PlayerListener implements Listener {
     private final Plugin plugin;
     private final HandshakeService<Player> handshake;
 
-    PlayerListener(Plugin plugin, HandshakeService<Player> handshake) {
+    private final java.util.function.Consumer<Player> onQuit;
+
+    PlayerListener(Plugin plugin, HandshakeService<Player> handshake, java.util.function.Consumer<Player> onQuit) {
         this.plugin = plugin;
         this.handshake = handshake;
+        this.onQuit = onQuit;
     }
 
     @EventHandler
@@ -38,5 +41,6 @@ final class PlayerListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         handshake.onQuit(event.getPlayer());
+        onQuit.accept(event.getPlayer());
     }
 }

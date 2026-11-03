@@ -60,6 +60,22 @@ public final class ClientSession {
 
         /** Der Server bietet das Server-Resource-Pack zum Laden durch die Mod an (nur nach abgeschlossenem Handshake). */
         default void onPackOffer(CorePacket.PackOffer offer) {}
+
+        /** Web-Tunnel: Antwort auf die Bitte um einen Einmal-Link ({@code path} leer = kein Zugang oder Web-Oberflaeche aus). */
+        default void onTunnelLogin(String path) {}
+
+        /** Web-Tunnel: Bytes von der Web-Oberflaeche fuer Verbindung {@code conn}. */
+        default void onTunnelData(int conn, byte[] data) {}
+
+        /** Web-Tunnel: der Server hat die Verbindung {@code conn} geschlossen oder abgelehnt. */
+        default void onTunnelClosed(int conn) {}
+    }
+
+    /** Sendet ein Core-Paket an den Server (nur nach abgeschlossenem Handshake). {@code false}, wenn nicht moeglich. */
+    public boolean sendCore(CorePacket.Serverbound packet) {
+        if (state != State.ACTIVE) return false;
+        transport.send(FrameCodec.encode(new Frame.CoreFrame(CorePacketCodec.encode(packet)), Direction.SERVERBOUND));
+        return true;
     }
 
     /** Ein Modul auf Seiten der Mod. */
@@ -250,6 +266,15 @@ public final class ClientSession {
             case CorePacket.PackOffer o -> {
                 if (state != State.ACTIVE) return;
                 for (Listener l : listeners) l.onPackOffer(o);
+            }
+            case CorePacket.TunnelLogin t -> {
+                if (state == State.ACTIVE) for (Listener l : listeners) l.onTunnelLogin(t.path());
+            }
+            case CorePacket.TunnelDown d -> {
+                if (state == State.ACTIVE) for (Listener l : listeners) l.onTunnelData(d.conn(), d.data());
+            }
+            case CorePacket.TunnelClosed c -> {
+                if (state == State.ACTIVE) for (Listener l : listeners) l.onTunnelClosed(c.conn());
             }
         }
     }
