@@ -540,6 +540,12 @@ public final class WebHost implements HttpHandler {
     private void login(HttpExchange ex, String token) throws IOException {
         String ip = remoteIp(ex);
         var session = auth.redeem(token, ip);
+        if (session.isEmpty() && auth.session(cookie(ex, COOKIE)).isPresent()) {
+            // Der Link wurde schon benutzt (z. B. doppelt geoeffnet), dieser Browser ist aber angemeldet: einfach weiter zur Startseite
+            ex.getResponseHeaders().set("Location", "/");
+            ex.sendResponseHeaders(302, -1);
+            return;
+        }
         if (session.isEmpty()) {
             send(ex, new WebResponse(403, "text/html; charset=utf-8",
                     "<!doctype html><meta charset=utf-8><title>PeakVerse</title><body style=\"font-family:sans-serif;background:#12141a;color:#e8e8ee;padding:2rem\"><h1>Link ungueltig</h1><p>Der Link ist abgelaufen oder wurde schon benutzt. Im Spiel <code>/peakcore web</code> eingeben, um einen neuen zu bekommen.</p></body>".getBytes(StandardCharsets.UTF_8)));
