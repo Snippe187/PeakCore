@@ -95,11 +95,17 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
                     switch (act) {
                         case "check" -> {
                             updates.check();
-                            sender.sendMessage(Component.text(updates.isNewer() ? "Neue Version verfuegbar." : "Du bist auf dem neuesten Stand (oder die Quelle ist nicht erreichbar, siehe status).", NamedTextColor.GOLD));
+                            if (updates.isNewer()) {
+                                sender.sendMessage(Component.text("Neue Version " + updates.latestVersion() + " verfuegbar.", NamedTextColor.GOLD));
+                                sender.sendMessage(updates.downloadOffer());
+                            } else {
+                                sender.sendMessage(Component.text("Du bist auf dem neuesten Stand (oder die Quelle ist nicht erreichbar, siehe status).", NamedTextColor.GOLD));
+                            }
                         }
                         case "download" -> {
                             updates.download();
-                            sender.sendMessage(Component.text("Update geladen und geprueft. Es wird beim naechsten Start installiert (/peakcore update restart <Minuten>).", NamedTextColor.GREEN));
+                            sender.sendMessage(Component.text("Update geladen und geprueft. Es wird beim naechsten Start installiert.", NamedTextColor.GREEN));
+                            sender.sendMessage(updates.restartOffer());
                         }
                         case "restart" -> updates.scheduleRestart(args.length > 2 ? Integer.parseInt(args[2]) : 5);
                         case "cancel" -> sender.sendMessage(Component.text(updates.cancelRestart() ? "Neustart abgebrochen." : "Es war kein Neustart geplant.", NamedTextColor.GOLD));

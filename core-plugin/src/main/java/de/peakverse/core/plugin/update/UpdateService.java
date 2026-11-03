@@ -136,6 +136,31 @@ public final class UpdateService implements Listener {
     private void tell(Player p, UpdateChecker.Release r) {
         p.sendMessage(Component.text("[PeakVerse] Neue Version " + r.version() + " verfuegbar (du hast " + currentVersion + "). ", NamedTextColor.GOLD)
                 .append(Component.text("[Release ansehen]", NamedTextColor.AQUA).clickEvent(ClickEvent.openUrl(r.page()))));
+        p.sendMessage(downloadOffer());
+    }
+
+    /** Klickbare Frage "jetzt herunterladen?" fuer den Chat. */
+    public Component downloadOffer() {
+        return Component.text("Jetzt herunterladen? ", NamedTextColor.GRAY)
+                .append(Component.text("[Ja, herunterladen]", NamedTextColor.GREEN).clickEvent(ClickEvent.runCommand("/peakcore update download")))
+                .append(Component.text("  "))
+                .append(Component.text("[Spaeter]", NamedTextColor.GRAY).clickEvent(ClickEvent.runCommand("/peakcore update status")));
+    }
+
+    /** Klickbare Frage "neu starten?" nach dem Download. */
+    public Component restartOffer() {
+        return Component.text("Jetzt neu starten (mit Vorwarnung fuer die Spieler)? ", NamedTextColor.GRAY)
+                .append(Component.text("[In 5 Minuten]", NamedTextColor.GREEN).clickEvent(ClickEvent.runCommand("/peakcore update restart 5")))
+                .append(Component.text("  "))
+                .append(Component.text("[Sofort]", NamedTextColor.GOLD).clickEvent(ClickEvent.runCommand("/peakcore update restart 0")))
+                .append(Component.text("  "))
+                .append(Component.text("[Spaeter]", NamedTextColor.GRAY).clickEvent(ClickEvent.runCommand("/peakcore update status")));
+    }
+
+    /** Die neueste bekannte Version aus dem Release-Repo oder {@code null}. */
+    public String latestVersion() {
+        UpdateChecker.Release r = latest;
+        return r == null ? null : r.version();
     }
 
     @EventHandler

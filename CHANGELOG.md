@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.5 (in Arbeit)
+- Updates im Chat: `/peakcore update check` fragt bei einer neuen Version "Jetzt herunterladen?" mit klickbarem [Ja, herunterladen] / [Spaeter]; nach dem Download kommt die klickbare Frage zum Neustart ([In 5 Minuten] / [Sofort] / [Spaeter]). Dieselbe Frage steht in der Meldung, die Operatoren beim Beitritt bekommen
+
 ## 0.1.4 (in Arbeit)
 - **Web-Tunnel**: Die Mod oeffnet die Web-Oberflaeche im Browser ueber die Minecraft-Verbindung, ohne dass der Web-Port von aussen erreichbar sein muss (z. B. bei Hostern ohne Zusatzport). Taste "PeakVerse Web-Oberflaeche oeffnen" oder `/peakcoreweb`: die Mod startet einen Proxy nur auf `127.0.0.1` (nur solange man auf dem Server ist), der Server verbindet sich selbst mit seinem Web-Port. Login wie immer ueber Einmal-Link, nur fuer Spieler mit Web-Zugang; je Spieler hoechstens 24 Verbindungen. Config `web.tunnel` (Standard an). Neue Core-Pakete (Protokollversion bleibt 1; ein aelterer Server antwortet nicht, die Mod meldet das nach 6 Sekunden)
 
