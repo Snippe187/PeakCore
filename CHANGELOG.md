@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.7
+- **Fehler-Bereich** in der Web-Oberflaeche (eigener Reiter): Warnungen und Fehler von PeakVerse und Pack-Probleme der Spieler, gleiche Meldungen zusammengefasst (Anzahl, zuletzt, Spieler), mit Filter, Details, Erledigt und Leeren. Gespeichert in `errors.json`.
+- Die Mod meldet dem Server, wenn sie das Server-Pack nicht laden kann (z. B. `ConnectException`); neues Core-Paket, aeltere Server ignorieren es.
+- Neues Modul **PeakAchievements** ist im Plugin enthalten (siehe dort).
+
 ## 0.1.5 (in Arbeit)
 - Updates im Chat: `/peakcore update check` fragt bei einer neuen Version "Jetzt herunterladen?" mit klickbarem [Ja, herunterladen] / [Spaeter]; nach dem Download kommt die klickbare Frage zum Neustart ([In 5 Minuten] / [Sofort] / [Spaeter]). Dieselbe Frage steht in der Meldung, die Operatoren beim Beitritt bekommen
 
