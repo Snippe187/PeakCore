@@ -73,6 +73,8 @@ modules:
     enabled: true
   peakboard:
     enabled: true
+  peakachievements:
+    enabled: true
 
 # Updates: PeakCore prueft ein oeffentliches GitHub-Release-Repo, laedt neue Versionen nach plugins/update/ (Paper installiert sie beim naechsten Start)
 # und kann den Server mit Countdown neu starten. Ein Reload ohne Neustart gibt es bewusst nicht.
