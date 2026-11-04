@@ -2,7 +2,7 @@
 // Der Rahmen (Menue, Startseite, Server, Module) ist in Deutsch, Englisch, Franzoesisch und Spanisch; die Seiten der Module bisher nur Deutsch/Englisch.
 const LANGS = [['de', 'Deutsch'], ['en', 'English'], ['fr', 'Français'], ['es', 'Español']];
 const STR = {
-  de: { home: 'Start', server: 'Server', modules: 'Module', players: 'Spieler', log: 'Protokoll', logout: 'Abmelden', hello: 'Angemeldet als', welcome: 'Willkommen',
+  de: { home: 'Start', server: 'Server', modules: 'Module', players: 'Spieler', errors: 'Fehler', log: 'Protokoll', logout: 'Abmelden', hello: 'Angemeldet als', welcome: 'Willkommen',
     th_day: 'Tag', th_night: 'Nacht', pickLang: 'Sprache wählen', ctaServer: 'Server verwalten', ctaModules: 'Module ansehen',
     tag1: 'Texturen zeichnen, die jeder sofort sieht.', tag2: 'Sounds, Packs und Fähigkeiten an einem Ort.', tag3: 'Dein Server, deine Regeln, live aktualisiert.',
     aboutT: 'Was ist PeakVerse?', aboutP: 'PeakVerse ist die Verwaltung für deinen Minecraft-Server. Du gestaltest Texturen, Sounds und das Server-Pack bequem im Browser. Spieler mit der Mod bekommen jede Änderung sofort, ohne neu beizutreten.',
@@ -21,7 +21,7 @@ const STR = {
     error: 'Fehler', live: 'Live verbunden', offline: 'Verbindung verloren, versuche neu...', ok: 'OK', yes: 'Ja', confirmT: 'Sicher?',
     pairT: 'Vom Handy verbinden', pairText: 'Gib deinen Minecraft-Namen ein. Du musst gerade im Spiel sein: dort bekommst du eine Nachricht, die du bestätigst. Danach bleibt dieses Gerät angemeldet.', pairName: 'Minecraft-Name', pairGo: 'Verbinden', pairWait: 'Warte auf die Bestätigung im Spiel …', pairCode: 'Im Spiel muss genau dieser Code stehen:', pairDenied: 'Abgelehnt. Wenn du es warst, versuche es in einer halben Minute noch einmal.', pairExpired: 'Die Zeit ist abgelaufen. Versuche es noch einmal.', pairMany: 'Zu viele Versuche. Bitte warte eine Minute.', pairBad: 'Das ist kein gültiger Minecraft-Name.', pairOr: 'oder im Spiel /peakweb eingeben und den Link öffnen',
     devT: 'Verbundene Geräte', devNone: 'Noch kein Gerät gekoppelt. Auf der Anmeldeseite deinen Minecraft-Namen eingeben, um ein Handy zu verbinden.', devThis: 'dieses Gerät', devLast: 'zuletzt', devBlock: 'Sperren', devBlockQ: 'Dieses Gerät sperren?', devHint: 'Gekoppelte Geräte bleiben angemeldet, bis du sie sperrst (oder der Spieler kein Operator mehr ist).' },
-  en: { home: 'Home', server: 'Server', modules: 'Modules', players: 'Players', log: 'Log', logout: 'Log out', hello: 'Signed in as', welcome: 'Welcome',
+  en: { home: 'Home', server: 'Server', modules: 'Modules', players: 'Players', errors: 'Errors', log: 'Log', logout: 'Log out', hello: 'Signed in as', welcome: 'Welcome',
     th_day: 'Day', th_night: 'Night', pickLang: 'Choose your language', ctaServer: 'Manage server', ctaModules: 'Browse modules',
     tag1: 'Draw textures everyone sees instantly.', tag2: 'Sounds, packs and abilities in one place.', tag3: 'Your server, your rules, updated live.',
     aboutT: 'What is PeakVerse?', aboutP: 'PeakVerse is the control center for your Minecraft server. Design textures, sounds and the server pack right in your browser. Players with the mod get every change instantly, without rejoining.',
@@ -40,13 +40,13 @@ const STR = {
     error: 'Error', live: 'Live connected', offline: 'Connection lost, retrying...', ok: 'OK', yes: 'Yes', confirmT: 'Are you sure?',
     pairT: 'Connect from your phone', pairText: 'Enter your Minecraft name. You must be in the game right now: you get a message there that you confirm. After that this device stays signed in.', pairName: 'Minecraft name', pairGo: 'Connect', pairWait: 'Waiting for the confirmation in the game …', pairCode: 'The game must show exactly this code:', pairDenied: 'Denied. If it was you, try again in half a minute.', pairExpired: 'Time ran out. Please try again.', pairMany: 'Too many tries. Please wait a minute.', pairBad: 'That is not a valid Minecraft name.', pairOr: 'or type /peakweb in the game and open the link',
     devT: 'Connected devices', devNone: 'No device paired yet. Enter your Minecraft name on the sign-in page to connect a phone.', devThis: 'this device', devLast: 'last used', devBlock: 'Block', devBlockQ: 'Block this device?', devHint: 'Paired devices stay signed in until you block them (or the player is no longer an operator).' },
-  fr: { home: 'Accueil', server: 'Serveur', modules: 'Modules', players: 'Joueurs', log: 'Journal', logout: 'Déconnexion', hello: 'Connecté en tant que', welcome: 'Bienvenue',
+  fr: { home: 'Accueil', server: 'Serveur', modules: 'Modules', players: 'Joueurs', errors: 'Erreurs', log: 'Journal', logout: 'Déconnexion', hello: 'Connecté en tant que', welcome: 'Bienvenue',
     th_day: 'Jour', th_night: 'Nuit', pickLang: 'Choisis ta langue', ctaServer: 'Gérer le serveur', ctaModules: 'Voir les modules',
     tag1: 'Dessine des textures que tout le monde voit tout de suite.', tag2: 'Sons, packs et capacités au même endroit.', tag3: 'Ton serveur, tes règles, mis à jour en direct.',
     aboutT: "Qu'est-ce que PeakVerse ?", aboutP: "PeakVerse est le centre de contrôle de ton serveur Minecraft. Crée textures, sons et pack serveur dans ton navigateur. Les joueurs avec le mod reçoivent chaque changement tout de suite, sans se reconnecter.",
     howT: 'Comment ça marche', s1T: 'Connexion', s1P: 'Tape /peakcore web en jeu et clique sur le lien.', s2T: 'Créer', s2P: 'Dessine des textures, envoie des fichiers, règle les capacités.', s3T: 'Publier', s3P: 'Le pack est construit et arrive tout de suite chez les joueurs.',
     srvT: 'Ton serveur', srvSub: "L'état et les outils en un coup d'œil.", modT: 'Modules', open: 'Ouvrir', planned: 'Prévu', soon: 'Bientôt', saved: 'Enregistré', cancel: 'Annuler', yes: 'Oui', error: 'Erreur' },
-  es: { home: 'Inicio', server: 'Servidor', modules: 'Módulos', players: 'Jugadores', log: 'Registro', logout: 'Cerrar sesión', hello: 'Sesión de', welcome: 'Bienvenido',
+  es: { home: 'Inicio', server: 'Servidor', modules: 'Módulos', players: 'Jugadores', errors: 'Errores', log: 'Registro', logout: 'Cerrar sesión', hello: 'Sesión de', welcome: 'Bienvenido',
     th_day: 'Día', th_night: 'Noche', pickLang: 'Elige tu idioma', ctaServer: 'Gestionar servidor', ctaModules: 'Ver módulos',
     tag1: 'Dibuja texturas que todos ven al instante.', tag2: 'Sonidos, packs y habilidades en un solo lugar.', tag3: 'Tu servidor, tus reglas, actualizado en vivo.',
     aboutT: '¿Qué es PeakVerse?', aboutP: 'PeakVerse es el centro de control de tu servidor de Minecraft. Crea texturas, sonidos y el pack del servidor desde el navegador. Los jugadores con el mod reciben cada cambio al instante, sin volver a entrar.',
@@ -231,9 +231,9 @@ function applyPrefs() {
 }
 
 // Reiter oben: Start, Server, Module, Protokoll. Die Seiten der Module haengen unter "Server" (Pack, Bereiche) oder "Module".
-const parentOf = id => id === 'players' ? 'players' : CORE_TOOLS.includes(id) ? 'server' : ['home', 'server', 'modules', 'log'].includes(id) ? id : 'modules';
+const parentOf = id => id === 'players' || id === 'errors' ? id : CORE_TOOLS.includes(id) ? 'server' : ['home', 'server', 'modules', 'log'].includes(id) ? id : 'modules';
 function buildNav() {
-  const items = [['home', t('home')], ['server', t('server')], ['modules', t('modules')], ...(S.modules.some(m => m.id === 'players') ? [['players', t('players')]] : []), ['log', t('log')]];
+  const items = [['home', t('home')], ['server', t('server')], ['modules', t('modules')], ...(S.modules.some(m => m.id === 'players') ? [['players', t('players')]] : []), ...(S.modules.some(m => m.id === 'errors') ? [['errors', t('errors')]] : []), ['log', t('log')]];
   $('#nav').replaceChildren(...items.map(([id, label]) => h('a', { 'data-id': id, class: parentOf(S.current) === id ? 'on' : '', onclick: () => go(id) }, label)));
   const crumb = $('#crumb');
   const m = S.modules.find(x => x.id === S.current);

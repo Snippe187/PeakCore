@@ -7,7 +7,7 @@ import java.util.List;
  * der Server akzeptiert nur {@link Serverbound}, die Mod nur {@link Clientbound}.
  */
 public sealed interface CorePacket {
-    sealed interface Serverbound extends CorePacket permits Hello, TunnelLoginRequest, TunnelOpen, TunnelUp, TunnelEnd {}
+    sealed interface Serverbound extends CorePacket permits Hello, TunnelLoginRequest, TunnelOpen, TunnelUp, TunnelEnd, PackReport {}
 
     sealed interface Clientbound extends CorePacket permits HelloAck, AdminState, PackOffer, TunnelLogin, TunnelDown, TunnelClosed {}
 
@@ -45,6 +45,13 @@ public sealed interface CorePacket {
 
     /** Der Server schliesst die Verbindung (auch: Verbindung abgelehnt oder nicht moeglich). */
     record TunnelClosed(int conn) implements Clientbound {}
+
+    /** Die Mod meldet, dass sie das Server-Pack nicht laden konnte (z. B. {@code ConnectException}); landet im Fehler-Bereich der Web-Oberflaeche. */
+    record PackReport(String message) implements Serverbound {
+        public PackReport {
+            if (message == null || message.isBlank() || message.length() > CoreProtocol.MAX_URL_LENGTH) throw new IllegalArgumentException("Ungueltige Meldung");
+        }
+    }
 
     /** Ein Modul, das die Mod des Spielers mitbringt. */
     record ModuleVersion(String id, String version) {

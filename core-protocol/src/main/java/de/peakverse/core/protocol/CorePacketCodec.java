@@ -24,6 +24,7 @@ public final class CorePacketCodec {
     static final int ID_TUNNEL_END = 9;
     static final int ID_TUNNEL_DOWN = 10;
     static final int ID_TUNNEL_CLOSED = 11;
+    static final int ID_PACK_REPORT = 12;
 
     private CorePacketCodec() {}
 
@@ -66,6 +67,10 @@ public final class CorePacketCodec {
                 writeString(out, o.url(), CoreProtocol.MAX_URL_LENGTH);
                 writeString(out, o.sha1(), 40);
                 writeLong(out, o.size());
+            }
+            case CorePacket.PackReport r -> {
+                out.write(ID_PACK_REPORT);
+                writeString(out, r.message(), CoreProtocol.MAX_URL_LENGTH);
             }
             case CorePacket.TunnelLoginRequest r -> out.write(ID_TUNNEL_LOGIN_REQUEST);
             case CorePacket.TunnelLogin l -> {
@@ -110,6 +115,7 @@ public final class CorePacketCodec {
                 case ID_TUNNEL_OPEN -> new CorePacket.TunnelOpen(in.getInt());
                 case ID_TUNNEL_UP -> new CorePacket.TunnelUp(in.getInt(), readBytes(in, CoreProtocol.TUNNEL_MAX_UP));
                 case ID_TUNNEL_END -> new CorePacket.TunnelEnd(in.getInt());
+                case ID_PACK_REPORT -> new CorePacket.PackReport(readString(in, CoreProtocol.MAX_URL_LENGTH));
                 default -> throw new MalformedFrameException("Unerwartetes Core-Paket vom Client: " + id);
             };
             if (id != ID_HELLO) requireFullyRead(in);

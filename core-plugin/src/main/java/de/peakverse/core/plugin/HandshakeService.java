@@ -84,6 +84,10 @@ final class HandshakeService<P> {
         }
         switch (packet) {
             case CorePacket.Hello hello -> onHello(player, id, hello);
+            case CorePacket.PackReport report -> {
+                java.util.function.BiConsumer<P, String> sink = packReportHandler;
+                if (sink != null && modded.contains(id) && packReports.merge(id, 1, Integer::sum) <= MAX_PACK_REPORTS) sink.accept(player, report.message());
+            }
             // Tunnel-Pakete nur von Spielern mit abgeschlossenem Handshake
             default -> {
                 java.util.function.BiConsumer<P, CorePacket.Serverbound> handler = tunnelHandler;
@@ -93,6 +97,14 @@ final class HandshakeService<P> {
     }
 
     private volatile java.util.function.BiConsumer<P, CorePacket.Serverbound> tunnelHandler;
+    private volatile java.util.function.BiConsumer<P, String> packReportHandler;
+    private static final int MAX_PACK_REPORTS = 10;
+    private final Map<UUID, Integer> packReports = new ConcurrentHashMap<>();
+
+    /** Empfaenger der Pack-Fehler, die die Mod meldet (Spieler, Text). */
+    void setPackReportHandler(java.util.function.BiConsumer<P, String> handler) {
+        this.packReportHandler = handler;
+    }
 
     /** Empfaenger der Tunnel-Pakete (Web-Oberflaeche ueber die Mod). */
     void setTunnelHandler(java.util.function.BiConsumer<P, CorePacket.Serverbound> handler) {

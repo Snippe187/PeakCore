@@ -12,6 +12,8 @@ import de.peakverse.core.plugin.update.UpdateWeb;
 import de.peakverse.core.plugin.pack.PackService;
 import de.peakverse.core.plugin.pack.PackWebServer;
 import de.peakverse.core.plugin.web.AdminLog;
+import de.peakverse.core.plugin.web.ErrorLog;
+import de.peakverse.core.plugin.web.ErrorsWeb;
 import de.peakverse.core.plugin.web.DeviceStore;
 import de.peakverse.core.plugin.web.PairingService;
 import de.peakverse.core.plugin.web.LiveHub;
@@ -46,6 +48,8 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
     private PackSender sender;
     private WebAuth webAuth;
     private LiveHub webHub;
+    private ErrorLog errorLog;
+    private java.util.logging.Handler logCapture;
     private TunnelService<Player> tunnel;
     private WebHost webHost;
     private DeviceStore deviceStore;
@@ -83,6 +87,11 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
         webAuth = new WebAuth(System::currentTimeMillis, (long) (getConfig().getDouble("web.session-hours", 8) * 3_600_000L));
         webHub = new LiveHub();
         AdminLog adminLog = new AdminLog(getDataFolder().toPath().resolve("web-log.jsonl"), System::currentTimeMillis);
+        errorLog = new ErrorLog(getDataFolder().toPath().resolve("errors.json"), System::currentTimeMillis, getLogger());
+        errorLog.load();
+        logCapture = errorLog.capture();
+        java.util.logging.Logger.getLogger("").addHandler(logCapture);
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, errorLog::saveIfDirty, 200L, 200L);
         webHost = new WebHost(webAuth, adminLog, webHub,
                 (java.util.function.Function<java.util.UUID, PermStore.Grant>) (uuid -> permStore.webGrant(uuid, Bukkit.getOfflinePlayer(uuid).isOp())), new WebHost.MainThread() {
                     @Override
@@ -203,6 +212,17 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
             }
         }, getLogger());
         getServer().getPluginManager().registerEvents(sender, this);
+        sender.setProblemSink((player, text) -> errorLog.report("PeakCore", "ERROR", text, null, player));
+        handshake.setPackReportHandler((player, text) -> errorLog.report("PeakCore", "ERROR",
+                "Die Mod konnte das Server-Pack nicht laden: " + text + " (Adresse: " + String.valueOf(sender.currentUrl()) + ")", null, player.getName()));
+        if (webOn) {
+            try (java.io.InputStream in = getResource("web/errors-panel.js")) {
+                new ErrorsWeb(webHost.registry("errors"), errorLog).register(new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+                errorLog.onChange(() -> webHost.registry("errors").changed("errors", "System"));
+            } catch (java.io.IOException | RuntimeException e) {
+                getLogger().log(Level.SEVERE, "Die Fehler-Seite der Web-Oberflaeche konnte nicht angelegt werden", e);
+            }
+        }
         if (webOn) {
             try (java.io.InputStream in = getResource("web/pack-panel.js"); java.io.InputStream in2 = getResource("web/areas-panel.js")) {
                 new PackWeb(webHost.registry("pack"), packs, sender, web, getDataFolder().toPath().resolve("pack"), getDataFolder().toPath().resolve("base-pack.zip"), getDataFolder().toPath().resolve("pack-files"), file -> {
@@ -342,6 +362,8 @@ public final class PeakCorePlugin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        if (logCapture != null) java.util.logging.Logger.getLogger("").removeHandler(logCapture);
+        if (errorLog != null) errorLog.saveIfDirty();
         if (updates != null) updates.stop();
         if (permService != null) permService.stop();
         if (tunnel != null) tunnel.close();

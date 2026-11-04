@@ -67,12 +67,14 @@ class CorePacketCodecTest {
     void tunnelPacketsRoundTripInTheRightDirection() {
         byte[] data = {1, 2, 3, (byte) 0xFF};
         List<CorePacket.Serverbound> up = List.of(new CorePacket.TunnelLoginRequest(), new CorePacket.TunnelOpen(5), new CorePacket.TunnelUp(5, data),
-                new CorePacket.TunnelEnd(5));
+                new CorePacket.TunnelEnd(5), new CorePacket.PackReport("ConnectException: Connection refused"));
         for (CorePacket.Serverbound p : up) {
             CorePacket.Serverbound back = CorePacketCodec.decodeServerbound(CorePacketCodec.encode(p));
             assertEquals(p.getClass(), back.getClass());
             assertThrows(MalformedFrameException.class, () -> CorePacketCodec.decodeClientbound(CorePacketCodec.encode(p)), "nur zum Server");
         }
+        assertEquals(new CorePacket.PackReport("ConnectException"), CorePacketCodec.decodeServerbound(CorePacketCodec.encode(new CorePacket.PackReport("ConnectException"))));
+        assertThrows(IllegalArgumentException.class, () -> new CorePacket.PackReport(" "));
         assertArrayEquals(data, ((CorePacket.TunnelUp) CorePacketCodec.decodeServerbound(CorePacketCodec.encode(new CorePacket.TunnelUp(9, data)))).data());
         assertEquals(9, ((CorePacket.TunnelOpen) CorePacketCodec.decodeServerbound(CorePacketCodec.encode(new CorePacket.TunnelOpen(9)))).conn());
         assertEquals(new CorePacket.TunnelLogin("/login?t=abc"), CorePacketCodec.decodeClientbound(CorePacketCodec.encode(new CorePacket.TunnelLogin("/login?t=abc"))));

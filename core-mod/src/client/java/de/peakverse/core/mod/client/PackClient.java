@@ -200,6 +200,14 @@ final class PackClient implements PackReceiver.Env {
     }
 
     @Override
+    public void reportFailure(String error) {
+        var session = de.peakverse.core.mod.PeakCoreSession.get();
+        if (session == null || error == null || error.isBlank()) return;
+        String text = error.length() > 300 ? error.substring(0, 300) : error;
+        session.sendCore(new de.peakverse.core.protocol.CorePacket.PackReport(text));
+    }
+
+    @Override
     public void chat(String message) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) mc.player.sendSystemMessage(Component.literal(message));

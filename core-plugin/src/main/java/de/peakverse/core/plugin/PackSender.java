@@ -131,5 +131,20 @@ final class PackSender implements Listener {
     public void onStatus(PlayerResourcePackStatusEvent event) {
         if (!PACK_ID.equals(event.getID())) return;
         log.info("Pack bei " + event.getPlayer().getName() + ": " + event.getStatus());
+        String why = switch (event.getStatus()) {
+            case FAILED_DOWNLOAD -> "Download fehlgeschlagen (Adresse oder Port von aussen nicht erreichbar?)";
+            case FAILED_RELOAD -> "Pack heruntergeladen, aber Minecraft konnte es nicht laden";
+            case INVALID_URL -> "Ungueltige Pack-Adresse";
+            case DISCARDED -> null;
+            default -> null;
+        };
+        if (why != null && problems != null) problems.accept(event.getPlayer().getName(), "Das Server-Resource-Pack konnte bei einem Spieler nicht geladen werden: " + why);
+    }
+
+    private java.util.function.BiConsumer<String, String> problems;
+
+    /** Meldet Pack-Probleme von Spielern (Name, Text) an den Fehler-Bereich der Web-Oberflaeche. */
+    void setProblemSink(java.util.function.BiConsumer<String, String> sink) {
+        this.problems = sink;
     }
 }

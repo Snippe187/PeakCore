@@ -57,6 +57,10 @@ public final class PackReceiver {
         default boolean applyNow(String sha1) {
             return false;
         }
+
+        /** Das Laden ist fehlgeschlagen: dem Server Bescheid geben (er zeigt es im Fehler-Bereich der Web-Oberflaeche). */
+        default void reportFailure(String error) {
+        }
     }
 
     /** Abstand der Chat-Erinnerungen, solange ein geladenes Pack auf den Beitritt wartet. */
@@ -102,6 +106,7 @@ public final class PackReceiver {
                 lastError = error;
                 pendingSha = null;
                 env.chat("[PeakVerse] Das Server-Resource-Pack konnte nicht geladen werden: " + error);
+                env.reportFailure(error);
             }
         });
     }
