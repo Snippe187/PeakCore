@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.8
+- **Neues Modul PeakAchievements** ist im Plugin enthalten (siehe dort).
+- **Fehler-Bereich** in der Web-Oberflaeche (eigener Reiter): Warnungen und Fehler von PeakVerse und Pack-Probleme der Spieler, gleiche Meldungen zusammengefasst (Anzahl, zuletzt, Spieler), mit Filter, Details, Erledigt und Leeren. Gespeichert in `errors.json`.
+- Die Mod meldet dem Server, wenn sie das Server-Pack nicht laden kann (z. B. `ConnectException`); neues Core-Paket, aeltere Server ignorieren es. Im Fehler-Bereich steht dann der genaue Grund mit der Pack-Adresse.
+- **Beta-Kanal**: `/peakcore update beta` zeigt die neueste Vorab-Version, `/peakcore update beta download` laedt sie (mit Pruefsumme). Betas werden nie von selbst angeboten; `/peakcore update` bleibt bei stabilen Versionen. Tab-Vervollstaendigung fuer `/peakcore update`.
+
 ## 0.1.8-beta.1
 - **Beta-Kanal**: `/peakcore update beta` zeigt die neueste Vorab-Version (Beta) aus dem Release-Repo, `/peakcore update beta download` laedt sie (mit Pruefsumme) und legt sie zum Installieren beim naechsten Start bereit. Betas werden nie von selbst angeboten; normale Updates (`/peakcore update`) bleiben bei stabilen Versionen.
 
