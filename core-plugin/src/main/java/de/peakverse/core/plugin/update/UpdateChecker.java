@@ -48,11 +48,39 @@ public final class UpdateChecker {
         if (!repo.matches("[A-Za-z0-9][A-Za-z0-9_.-]{0,99}/[A-Za-z0-9][A-Za-z0-9_.-]{0,99}")) throw new IllegalArgumentException("Ungueltiges Repo: " + repo);
     }
 
-    /** Neueste Version aus dem Repo. */
+    /** Neueste stabile Version aus dem Repo (GitHub zaehlt keine Vorab-Versionen und keine Entwuerfe dazu). */
     public Release latest() throws IOException, InterruptedException {
         String json = getString(apiBase + "/repos/" + repo + "/releases/latest");
         JsonObject o = GSON.fromJson(json, JsonObject.class);
         if (o == null || !o.has("tag_name")) throw new IOException("Das Repo hat noch keine Version.");
+        return parse(o);
+    }
+
+    /**
+     * Neueste Version einschliesslich Vorab-Versionen (Beta). Entwuerfe sieht GitHub fuer Fremde nicht; hier werden sie zusaetzlich uebersprungen.
+     * Eine stabile Version mit hoeherer oder gleicher Nummer gewinnt gegen eine Beta derselben Nummer.
+     */
+    public Release latestBeta() throws IOException, InterruptedException {
+        var arr = GSON.fromJson(getString(apiBase + "/repos/" + repo + "/releases?per_page=30"), JsonArray.class);
+        Release best = null;
+        if (arr != null) {
+            for (JsonElement e : arr) {
+                JsonObject o = e.getAsJsonObject();
+                if (o.has("draft") && o.get("draft").getAsBoolean() || !o.has("tag_name")) continue;
+                Release r;
+                try {
+                    r = parse(o);
+                } catch (IOException ex) {
+                    continue; // ein Release ohne PeakCore-Jar wird uebersprungen
+                }
+                if (best == null || compare(r.version(), best.version()) > 0) best = r;
+            }
+        }
+        if (best == null) throw new IOException("Das Repo hat noch keine Version.");
+        return best;
+    }
+
+    private Release parse(JsonObject o) throws IOException {
         String tag = o.get("tag_name").getAsString();
         String version = tag.startsWith("v") || tag.startsWith("V") ? tag.substring(1) : tag;
         String jarName = null, jarUrl = null, shaUrl = null;
@@ -75,7 +103,6 @@ public final class UpdateChecker {
         return new Release(version, str(o, "name", tag), str(o, "body", ""), jarName, jarUrl, shaUrl, size,
                 str(o, "html_url", "https://github.com/" + repo + "/releases"));
     }
-
     private static String str(JsonObject o, String key, String fallback) {
         return o.has(key) && !o.get(key).isJsonNull() ? o.get(key).getAsString() : fallback;
     }

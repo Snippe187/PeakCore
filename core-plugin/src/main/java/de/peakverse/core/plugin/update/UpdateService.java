@@ -30,6 +30,7 @@ public final class UpdateService implements Listener {
     private final Path stagedMarker;
     private volatile UpdateChecker checker;
     private volatile UpdateChecker.Release latest;
+    private volatile UpdateChecker.Release betaLatest;
     private volatile String error = "";
     private volatile long checkedAt;
     private volatile boolean busy;
@@ -113,10 +114,51 @@ public final class UpdateService implements Listener {
         if (checker == null) throw new IOException(error.isEmpty() ? "Keine Update-Quelle eingestellt (update.repo)." : error);
         if (latest == null) check();
         if (!isNewer()) throw new IOException("Es gibt keine neuere Version.");
+        stage(latest);
+    }
+
+    // ---- Beta (Vorab-Versionen) ----
+
+    /** Fragt das Repo nach der neuesten Version einschliesslich Beta. Meldet nie von selbst etwas. */
+    public synchronized void checkBeta() throws IOException {
+        if (checker == null) throw new IOException(error.isEmpty() ? "Keine Update-Quelle eingestellt (update.repo)." : error);
+        try {
+            betaLatest = checker.latestBeta();
+            error = "";
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Abgebrochen");
+        }
+        checkedAt = System.currentTimeMillis();
+    }
+
+    public boolean isBetaNewer() {
+        UpdateChecker.Release r = betaLatest;
+        return r != null && UpdateChecker.compare(r.version(), currentVersion) > 0;
+    }
+
+    public String betaVersion() {
+        UpdateChecker.Release r = betaLatest;
+        return r == null ? null : r.version();
+    }
+
+    public String betaPage() {
+        UpdateChecker.Release r = betaLatest;
+        return r == null ? null : r.page();
+    }
+
+    /** Laedt die neueste Beta nach {@code plugins/update/} (blockiert). Erst {@link #checkBeta()} aufrufen. */
+    public synchronized void downloadBeta() throws IOException {
+        if (betaLatest == null) checkBeta();
+        if (!isBetaNewer()) throw new IOException("Es gibt keine neuere Beta (oder Version) als " + currentVersion + ".");
+        stage(betaLatest);
+    }
+
+    private void stage(UpdateChecker.Release release) throws IOException {
         busy = true;
         try {
-            checker.download(latest, stagedJar());
-            stagedVersion = latest.version();
+            checker.download(release, stagedJar());
+            stagedVersion = release.version();
             Files.writeString(stagedMarker, stagedVersion);
             error = "";
             plugin.getLogger().info("Update " + stagedVersion + " geladen und geprueft. Es wird beim naechsten Start installiert.");
@@ -127,7 +169,6 @@ public final class UpdateService implements Listener {
             busy = false;
         }
     }
-
     private void notifyAdmins() {
         UpdateChecker.Release r = latest;
         for (Player p : Bukkit.getOnlinePlayers()) if (p.isOp()) tell(p, r);
@@ -145,6 +186,14 @@ public final class UpdateService implements Listener {
                 .append(Component.text("[Ja, herunterladen]", NamedTextColor.GREEN).clickEvent(ClickEvent.runCommand("/peakcore update download")))
                 .append(Component.text("  "))
                 .append(Component.text("[Spaeter]", NamedTextColor.GRAY).clickEvent(ClickEvent.runCommand("/peakcore update status")));
+    }
+
+    /** Klickbare Frage "Beta laden?" fuer den Chat. */
+    public Component betaOffer() {
+        return Component.text("Beta jetzt herunterladen? ", NamedTextColor.GRAY)
+                .append(Component.text("[Ja, Beta laden]", NamedTextColor.GREEN).clickEvent(ClickEvent.runCommand("/peakcore update beta download")))
+                .append(Component.text("  "))
+                .append(Component.text("[Nein]", NamedTextColor.GRAY).clickEvent(ClickEvent.runCommand("/peakcore update status")));
     }
 
     /** Klickbare Frage "neu starten?" nach dem Download. */
@@ -241,6 +290,14 @@ public final class UpdateService implements Listener {
             l.addProperty("size", r.size());
             l.addProperty("hasChecksum", r.shaUrl() != null);
             o.add("latest", l);
+        }
+        UpdateChecker.Release b = betaLatest;
+        if (b != null) {
+            JsonObject bl = new JsonObject();
+            bl.addProperty("version", b.version());
+            bl.addProperty("page", b.page());
+            bl.addProperty("newer", isBetaNewer());
+            o.add("beta", bl);
         }
         o.addProperty("staged", Files.isRegularFile(stagedJar()));
         o.addProperty("stagedVersion", stagedVersion);

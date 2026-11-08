@@ -107,6 +107,21 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
                             sender.sendMessage(Component.text("Update geladen und geprueft. Es wird beim naechsten Start installiert.", NamedTextColor.GREEN));
                             sender.sendMessage(updates.restartOffer());
                         }
+                        case "beta" -> {
+                            if (args.length > 2 && args[2].equalsIgnoreCase("download")) {
+                                updates.downloadBeta();
+                                sender.sendMessage(Component.text("Beta " + updates.betaVersion() + " geladen und geprueft. Sie wird beim naechsten Start installiert.", NamedTextColor.GREEN));
+                                sender.sendMessage(updates.restartOffer());
+                            } else {
+                                updates.checkBeta();
+                                if (updates.isBetaNewer()) {
+                                    sender.sendMessage(Component.text("Beta " + updates.betaVersion() + " verfuegbar. Betas sind zum Testen: es kann Fehler geben, am besten zuerst nicht auf dem Haupt-Server.", NamedTextColor.GOLD));
+                                    sender.sendMessage(updates.betaOffer());
+                                } else {
+                                    sender.sendMessage(Component.text("Es gibt keine neuere Beta oder Version (neueste im Repo: " + updates.betaVersion() + ").", NamedTextColor.GOLD));
+                                }
+                            }
+                        }
                         case "restart" -> updates.scheduleRestart(args.length > 2 ? Integer.parseInt(args[2]) : 5);
                         case "cancel" -> sender.sendMessage(Component.text(updates.cancelRestart() ? "Neustart abgebrochen." : "Es war kein Neustart geplant.", NamedTextColor.GOLD));
                         default -> sender.sendMessage(Component.text(updates.statusJson(), NamedTextColor.GRAY));
@@ -154,6 +169,10 @@ final class CoreCommand implements CommandExecutor, TabCompleter {
         String prefix = args[args.length - 1].toLowerCase();
         if (args.length == 1) return SUB.stream().filter(s -> s.startsWith(prefix)).toList();
         if (args[0].equalsIgnoreCase("pack")) return packCommand.complete(java.util.Arrays.copyOfRange(args, 1, args.length));
+        if (args[0].equalsIgnoreCase("update")) {
+            if (args.length == 2) return List.of("status", "check", "download", "beta", "restart", "cancel").stream().filter(s -> s.startsWith(prefix)).toList();
+            if (args.length == 3 && args[1].equalsIgnoreCase("beta")) return List.of("download").stream().filter(s -> s.startsWith(prefix)).toList();
+        }
         return List.of();
     }
 }

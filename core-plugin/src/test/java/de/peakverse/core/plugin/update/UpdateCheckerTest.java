@@ -72,6 +72,25 @@ class UpdateCheckerTest {
     }
 
     @Test
+    void betaPicksTheHighestNonDraftVersionAndStableIsNotAffected() throws Exception {
+        server.createContext("/repos/o/b/releases", ex -> {
+            String a1 = "[{\"name\":\"PeakCore-%s.jar\",\"browser_download_url\":\"" + base + "/dl/x.jar\"},{\"name\":\"PeakCore-%s.jar.sha256\",\"browser_download_url\":\"" + base + "/dl/sha\"}]";
+            String rel = "{\"tag_name\":\"v%s\",\"draft\":%s,\"prerelease\":%s,\"assets\":" + a1 + "}";
+            reply(ex, 200, "["
+                    + String.format(rel, "0.3.0", "true", "false", "0.3.0", "0.3.0") + ","              // Entwurf: wird uebersprungen
+                    + String.format(rel, "0.2.1-beta.1", "false", "true", "0.2.1-beta.1", "0.2.1-beta.1") + ","
+                    + String.format(rel, "0.2.0", "false", "false", "0.2.0", "0.2.0") + "]");
+        });
+        UpdateChecker.Release beta = new UpdateChecker(base, "o/b").latestBeta();
+        assertEquals("0.2.1-beta.1", beta.version());
+        assertTrue(UpdateChecker.compare("0.2.1-beta.1", "0.2.0") > 0);
+        assertTrue(UpdateChecker.compare("0.2.1", "0.2.1-beta.1") > 0, "die stabile Version ist neuer als ihre Beta");
+        assertTrue(UpdateChecker.compare("0.2.1-beta.2", "0.2.1-beta.1") > 0);
+        // die stabile Abfrage bleibt bei "latest" (GitHub liefert dort nie Vorab-Versionen)
+        assertEquals("0.2.0", new UpdateChecker(base, "o/r").latest().version());
+    }
+
+    @Test
     void downloadVerifiesTheChecksumAndReplacesTheTarget(@TempDir Path dir) throws Exception {
         UpdateChecker c = new UpdateChecker(base, "o/r");
         Path target = dir.resolve("update/PeakCore-0.1.0.jar");
