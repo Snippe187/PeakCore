@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.1.8
+- **Rechte fremder Plugins**: Neuer Reiter Spieler > Plugins: Plugins wie AssassinTales waehlen, deren Rechte danach in Rollen und je Spieler gesetzt werden koennen (`permissions.manage-plugins` in der config.yml). Die Rechte der neuen Module (Achievements, Enchants, Admin, Warps) sind jetzt ebenfalls dabei.
 - **Neues Modul PeakAchievements** ist im Plugin enthalten (siehe dort).
 - **Fehler-Bereich** in der Web-Oberflaeche (eigener Reiter): Warnungen und Fehler von PeakVerse und Pack-Probleme der Spieler, gleiche Meldungen zusammengefasst (Anzahl, zuletzt, Spieler), mit Filter, Details, Erledigt und Leeren. Gespeichert in `errors.json`.
 - Die Mod meldet dem Server, wenn sie das Server-Pack nicht laden kann (z. B. `ConnectException`); neues Core-Paket, aeltere Server ignorieren es. Im Fehler-Bereich steht dann der genaue Grund mit der Pack-Adresse.
