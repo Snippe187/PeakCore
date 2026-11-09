@@ -11,7 +11,7 @@ export default async function mount(root, ctx) {
   }
   const roleName = id => { const r = meta.roles.find(x => x.id === id); return r ? ctx.t({ de: r.nameDe, en: r.nameEn }) : ''; };
   const when = t => t ? new Date(t).toLocaleString(ctx.lang) : '–';
-  const MOD = { peakcore: 'PeakCore', peaksound: 'PeakSound', texturepeak: 'TexturePeak', peakboard: 'PeakBoard' };
+  const MOD = { peakcore: 'PeakCore', peaksound: 'PeakSound', texturepeak: 'TexturePeak', peakboard: 'PeakBoard', peakachievements: 'Achievements', peakenchants: 'Enchants', peakadmin: 'Admin', peakwarps: 'Warps' };
 
   if (!document.getElementById('pl-style')) {
     const st = document.createElement('style'); st.id = 'pl-style';
@@ -135,10 +135,19 @@ export default async function mount(root, ctx) {
         ro.builtin ? null : h('div', { class: 'row', style: 'margin-top:8px' }, h('button', { class: 'px-btn small danger', onclick: async ev => { ev.stopPropagation(); if (await ctx.confirm(L('Rolle löschen? Spieler mit dieser Rolle verlieren sie.', 'Delete role? Players with it lose it.'))) { const res = await call('roles/' + ro.id, 'DELETE', undefined, L('Gelöscht', 'Deleted')); if (res) { meta = res; players = await ctx.api('list'); render(); } } } }, L('Löschen', 'Delete')))))));
   }
 
+  // ---------- Plugins (Rechte fremder Plugins mitverwalten) ----------
+  let pluginList = null;
+  function pluginsView() {
+    if (!pluginList) { ctx.api('plugins').then(r => { pluginList = r; render(); }).catch(() => {}); return h('p', { class: 'sub' }, '...'); }
+    return h('div', {},
+      h('p', { class: 'sub' }, L('Hier waehlst du Plugins (z. B. AssassinTales), deren Rechte du in Rollen und bei einzelnen Spielern setzen willst. Die Rechte erscheinen danach im Reiter Rechte.', 'Pick plugins (e.g. AssassinTales) whose permissions you want to set in roles and per player. They then show up in the Rights tab.')),
+      pluginList.map(p => h('div', { class: 'pl-right' }, h('div', {}, h('b', {}, p.name), h('span', { class: 'sub' }, ' · ' + p.count + ' ' + L('Rechte', 'permissions'))),
+        h('div', { class: 'pl-seg' }, h('button', { class: p.managed ? 'on allow' : '', onclick: async () => { const r = await call('plugins', 'POST', { name: p.name, on: !p.managed }, 'OK'); if (r) { pluginList = r; await rel(); render(); } } }, p.managed ? L('verwaltet', 'managed') : L('nicht verwaltet', 'not managed'))))));
+  }
   function render(keepFocus) {
-    const main = tab === 'players' ? h('div', { class: 'pl-wrap' }, listView(), detailView()) : rolesView();
+    const main = tab === 'players' ? h('div', { class: 'pl-wrap' }, listView(), detailView()) : tab === 'plugins' ? pluginsView() : rolesView();
     set(h('h1', {}, L('Spieler', 'Players')), h('p', { class: 'sub' }, L('Rechte, Rollen, Notizen und Sperren – getrennt je Modul. Spieler ohne Eintrag behalten genau die Rechte, die der Server sonst vergibt.', 'Rights, roles, notes and sanctions – separate per module. Players without an entry keep exactly the rights the server gives them otherwise.')),
-      h('div', { class: 'row' }, [['players', L('Spieler', 'Players')], ['roles', L('Rollen', 'Roles') + ' (' + meta.roles.length + ')']].map(([k, l]) => h('button', { class: 'px-btn ' + (tab === k ? 'active' : ''), onclick: () => { tab = k; render(); } }, l))),
+      h('div', { class: 'row' }, [['players', L('Spieler', 'Players')], ['roles', L('Rollen', 'Roles') + ' (' + meta.roles.length + ')'], ['plugins', L('Plugins', 'Plugins')]].map(([k, l]) => h('button', { class: 'px-btn ' + (tab === k ? 'active' : ''), onclick: () => { tab = k; render(); } }, l))),
       h('div', { style: 'margin-top:14px' }, main));
     if (keepFocus) { const i = root.querySelector('.pl-list')?.parentElement?.querySelector('input'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   }

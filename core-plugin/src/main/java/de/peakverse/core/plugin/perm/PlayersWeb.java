@@ -48,6 +48,39 @@ public final class PlayersWeb {
         web.route("player/*", this::player);
         web.route("roles", this::saveRole);
         web.route("roles/*", this::deleteRole);
+        web.route("plugins", this::plugins);
+    }
+
+    // ---- Plugins, deren Rechte mitverwaltet werden ----
+
+    private String pluginsJson() {
+        JsonArray a = new JsonArray();
+        List<String> managed = perms.managedPlugins();
+        for (org.bukkit.plugin.Plugin pl : Bukkit.getPluginManager().getPlugins()) {
+            if (pl.getName().equals("PeakCore")) continue;
+            JsonObject o = new JsonObject();
+            o.addProperty("name", pl.getName());
+            o.addProperty("count", PermissionService.permsOf(pl).size());
+            o.addProperty("managed", managed.stream().anyMatch(x -> x.equalsIgnoreCase(pl.getName())));
+            a.add(o);
+        }
+        return GSON.toJson(a);
+    }
+
+    private WebResponse plugins(WebRequest r) throws Exception {
+        if (r.method().equals("POST")) {
+            JsonObject o = GSON.fromJson(r.text(), JsonObject.class);
+            String name = text(o, "name");
+            boolean on = o.has("on") && o.get("on").getAsBoolean();
+            WebResponse res = web.onMain(() -> {
+                perms.setManaged(name, on);
+                return WebResponse.json(pluginsJson());
+            });
+            record(r.admin(), "Rechte-Verwaltung fuer Plugin " + name + (on ? " eingeschaltet" : " ausgeschaltet"));
+            web.changed("players", r.admin());
+            return res;
+        }
+        return web.onMain(() -> WebResponse.json(pluginsJson()));
     }
 
     // ---- Lesen ----

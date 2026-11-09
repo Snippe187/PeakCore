@@ -21,7 +21,7 @@ import org.bukkit.plugin.java.JavaPlugin;
  */
 public final class PermissionService implements Listener {
     /** Rechte-Praefixe, die PeakCore verwaltet (je Modul). */
-    public static final List<String> PREFIXES = List.of("peakcore.", "peaksound.", "texturepeak.", "peakboard.");
+    public static final List<String> PREFIXES = List.of("peakcore.", "peaksound.", "texturepeak.", "peakboard.", "peakachievements.", "peakenchants.", "peakadmin.", "peakwarps.");
 
     private final JavaPlugin plugin;
     private final PermStore store;
@@ -32,16 +32,47 @@ public final class PermissionService implements Listener {
         this.store = store;
     }
 
-    /** Alle bekannten Rechte der PeakVerse-Module (aus der plugin.yml und den Modulen). */
+    /**
+     * Alle Rechte, die PeakCore verwaltet: die der PeakVerse-Module (Praefixe) und die Rechte der Plugins, die in der config.yml unter
+     * {@code permissions.manage-plugins} stehen (z. B. AssassinTales). Damit lassen sich Rechte fremder Plugins in Rollen und je Spieler setzen.
+     */
     public List<Permission> catalog() {
+        java.util.Set<String> managed = new java.util.HashSet<>();
+        for (String name : managedPlugins()) {
+            org.bukkit.plugin.Plugin other = Bukkit.getPluginManager().getPlugin(name);
+            if (other != null) for (Permission p : permsOf(other)) managed.add(p.getName());
+        }
         List<Permission> out = new ArrayList<>();
         for (Permission p : Bukkit.getPluginManager().getPermissions()) {
-            if (PREFIXES.stream().anyMatch(p.getName()::startsWith)) out.add(p);
+            if (PREFIXES.stream().anyMatch(p.getName()::startsWith) || managed.contains(p.getName())) out.add(p);
         }
         out.sort((a, b) -> a.getName().compareTo(b.getName()));
         return out;
     }
 
+    /** Namen der Plugins, deren Rechte PeakCore zusaetzlich verwaltet. */
+    public List<String> managedPlugins() {
+        return plugin.getConfig().getStringList("permissions.manage-plugins");
+    }
+
+    /** Nimmt die Rechte eines Plugins in die Verwaltung auf oder wieder heraus (gespeichert in der config.yml). */
+    public void setManaged(String name, boolean on) {
+        org.bukkit.plugin.Plugin p = Bukkit.getPluginManager().getPlugin(name);
+        if (p == null) throw new IllegalArgumentException("Plugin nicht gefunden: " + name);
+        if (p == plugin) throw new IllegalArgumentException("Die Rechte von PeakCore sind immer dabei.");
+        List<String> l = new ArrayList<>(managedPlugins());
+        l.removeIf(x -> x.equalsIgnoreCase(p.getName()));
+        if (on) l.add(p.getName());
+        plugin.getConfig().set("permissions.manage-plugins", l);
+        plugin.saveConfig();
+        applyAll();
+    }
+
+    /** Die in der plugin.yml eines Plugins deklarierten Rechte. */
+    @SuppressWarnings("deprecation")
+    public static List<Permission> permsOf(org.bukkit.plugin.Plugin other) {
+        return other.getDescription().getPermissions();
+    }
     public List<String> catalogNames() {
         return catalog().stream().map(Permission::getName).toList();
     }
