@@ -214,5 +214,22 @@ h1.big .ch:hover { color: var(--accent); transform: translateY(-6px) rotate(-4de
 .logo-gen .spin { animation: spin 9s linear infinite; }
 @keyframes spin { from { transform: translate(32px, 32px) rotate(0deg); } to { transform: translate(32px, 32px) rotate(360deg); } }
 .logo-planned .layer { opacity: .5; animation: lay 3s ease-in-out infinite; }
+.logo-gen .spark { animation: tptwinkle 2.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.logo-gen .hbar { transform-box: fill-box; transform-origin: left; animation: hbar 2.4s ease-in-out infinite alternate; }
+@keyframes hbar { from { transform: scaleX(.2); } to { transform: scaleX(1); } }
+.logo-gen .glow { animation: glow 2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes glow { 0%, 100% { opacity: .55; } 50% { opacity: 1; filter: drop-shadow(0 0 4px #d9b8ff); } }
+.logo-gen .rise { animation: rise 2.4s ease-in infinite; }
+@keyframes rise { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(-34px); opacity: 0; } }
+.logo-gen .check { stroke-dasharray: 60; animation: draw 3s ease-in-out infinite; }
+@keyframes draw { 0% { stroke-dashoffset: 60; } 40%, 85% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 60; } }
+.logo-gen .portal { animation: portal 1.6s ease-in-out infinite; }
+@keyframes portal { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+.logo-gen .ants { animation: ants 1.4s linear infinite; }
+@keyframes ants { to { stroke-dashoffset: -20; } }
+.logo-gen .trend { stroke-dasharray: 90; animation: draw2 4s ease-in-out infinite; }
+@keyframes draw2 { 0% { stroke-dashoffset: 90; } 50%, 90% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 90; } }
+.mcard:hover .logo-gen, .fcard:hover .logo-gen { transform: scale(1.1); }
+.logo-gen { transition: transform .3s; overflow: visible; }
 .fx-off .logo-tp .tp-spark { opacity: 1; }
 

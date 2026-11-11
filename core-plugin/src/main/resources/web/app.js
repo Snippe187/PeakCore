@@ -172,9 +172,18 @@ const DESC = {
   texturepeak: { de: 'Eigene Texturen für Gegenstände: Pixel-Editor, Standard-Bilder zum Kopieren und Ändern, Fähigkeiten und ein Archiv.', en: 'Custom item textures: pixel editor, default images to copy or modify, abilities and an archive.' },
   pack: { de: 'Das Server-Pack: Status, Testmodus mit Testern, Freigabe für alle und Zurückrollen.', en: 'The server pack: status, test mode with testers, release to everyone and rollback.' },
   areas: { de: 'Eigene Dateien: Sounds, Schriften, Partikel, HUD, Himmel, Titelbild und 3D-Modelle.', en: 'Your own files: sounds, fonts, particles, HUD, sky, title image and 3D models.' },
-  peaksound: { de: 'Musik und Sounds im Spiel.', en: 'Music and sounds in the game.' }
+  peaksound: { de: 'Musik und Sounds im Spiel.', en: 'Music and sounds in the game.' },
+  peakboard: { de: 'Die Anzeige rechts im Spiel (Scoreboard) mit eigenen Zeilen.', en: 'The sidebar display in game with your own lines.' },
+  peakachievements: { de: 'Eigene Achievements und alle Minecraft-Fortschritte in einem Baum.', en: 'Custom achievements and all Minecraft advancements in one tree.' },
+  peakenchants: { de: 'Verzauberungen (Datapack-Addon) ansehen, bearbeiten und vergeben.', en: 'View, edit and give enchantments (datapack add-on).' },
+  peakadmin: { de: 'Server-Verwaltung: Spieler, Konsole, Status, Chat, Sicherungen und Item-Log.', en: 'Server administration: players, console, status, chat, backups and item log.' },
+  peakwarps: { de: 'Warp-Punkte mit Recht je Warp und Marker auf der Karte.', en: 'Warp points with a permission per warp and map markers.' },
+  peakregions: { de: 'WorldGuard-Regionen mit Flags und WorldEdit-Schematics.', en: 'WorldGuard regions with flags and WorldEdit schematics.' },
+  peakstats: { de: 'Statistiken: Spielzeit, Kämpfe, Bauen, Bestenlisten und Verlauf.', en: 'Statistics: play time, combat, building, leaderboards and history.' },
+  errors: { de: 'Fehler und Warnungen aus dem Server-Log auf einen Blick.', en: 'Errors and warnings from the server log at a glance.' },
+  players: { de: 'Spieler, Rollen, Rechte, Notizen und Verwarnungen.', en: 'Players, roles, permissions, notes and warnings.' }
 };
-const PLANNED = [{ name: 'PeakStats', de: 'Statistiken und Ranglisten.', en: 'Statistics and leaderboards.' }, { name: 'ServerPackKeeper', de: 'Sichert und verwaltet ganze Server-Packs.', en: 'Backs up and manages whole server packs.' }];
+const PLANNED = [{ name: 'ServerPackKeeper', de: 'Sichert und verwaltet ganze Server-Packs.', en: 'Backs up and manages whole server packs.' }];
 
 const SVGNS = 'http://www.w3.org/2000/svg';
 function svg(tag, attrs = {}, ...kids) {
@@ -211,6 +220,45 @@ function logoGeneric(id, size = 96) {
   if (id === 'peaksound') [0, 1, 2, 3, 4].forEach(i => { const r = svg('rect', { x: 8 + i * 11, y: 12, width: 8, height: 40, fill: i % 2 ? '#b58cff' : '#7aa2ff', class: 'bar' }); r.style.animationDelay = (i * .18) + 's'; s.append(r); });
   else if (id === 'pack') { [0, 1, 2].forEach(i => { const r = svg('rect', { x: 10 + i * 4, y: 40 - i * 12, width: 40, height: 12, fill: ['#5fbf3c', '#8b5a2b', '#7aa2ff'][i], class: 'layer' }); r.style.animationDelay = (i * .25) + 's'; s.append(r); }); }
   else if (id === 'areas') { const g = svg('g', { class: 'spin', transform: 'translate(32 32)' }, [0, 1, 2, 3].map(i => svg('rect', { x: -3, y: -26, width: 6, height: 20, fill: ['#ffd86b', '#7aa2ff', '#b58cff', '#6fe0b0'][i], transform: `rotate(${i * 90})` }))); s.append(g, svg('rect', { x: 26, y: 26, width: 12, height: 12, fill: '#fff' })); }
+  else if (id === 'peakachievements') {
+    const cup = ['yyyyyyyyyy', 'y.yyyyyy.y', 'y.yyyyyy.y', '.yyyyyyyy.', '..yyyyyy..', '...yyyy...', '....yy....', '....yy....', '..yyyyyy..', '..yyyyyy..'];
+    const g = svg('g', { class: 'layer' });
+    cup.forEach((row, y) => { const last = row.lastIndexOf('y'); [...row].forEach((ch, x) => { if (ch === '.') return; g.append(svg('rect', { x: 7 + x * 5, y: 8 + y * 5, width: 5.2, height: 5.2, fill: x === last ? '#d99a2b' : (y < 5 && x === 2 ? '#fff0b5' : '#ffd86b') })); }); });
+    s.append(g);
+    [[10, 10], [54, 14], [32, 4]].forEach(([x, y], i) => { const sp = svg('g', { class: 'spark', transform: `translate(${x} ${y})` }, svg('rect', { x: -1, y: -4, width: 2, height: 8, fill: '#fff6c8' }), svg('rect', { x: -4, y: -1, width: 8, height: 2, fill: '#fff6c8' })); sp.style.animationDelay = (i * .7) + 's'; s.append(sp); });
+  } else if (id === 'peakboard') {
+    s.append(svg('rect', { x: 10, y: 6, width: 44, height: 52, fill: '#171c2e', stroke: '#7aa2ff', 'stroke-width': 3 }), svg('rect', { x: 14, y: 10, width: 36, height: 7, fill: '#7aa2ff' }));
+    [[24, '#ffd86b'], [32, '#6fe0b0'], [40, '#b58cff'], [48, '#ff8a8a']].forEach(([y, c], i) => { const r = svg('rect', { x: 14, y, width: 28, height: 5, fill: c, class: 'hbar' }); r.style.animationDelay = (i * .35) + 's'; s.append(svg('rect', { x: 14, y, width: 36, height: 5, fill: '#252c47' }), r); });
+  } else if (id === 'peakenchants') {
+    s.append(svg('rect', { x: 12, y: 8, width: 40, height: 48, fill: '#6a3fc4' }), svg('rect', { x: 12, y: 8, width: 7, height: 48, fill: '#47288f' }), svg('rect', { x: 49, y: 10, width: 3, height: 44, fill: '#efe6ff' }), svg('rect', { x: 12, y: 52, width: 40, height: 4, fill: '#47288f' }));
+    s.append(svg('g', { class: 'glow', transform: 'translate(33 30)' }, svg('rect', { x: -2, y: -11, width: 4, height: 22, fill: '#d9b8ff' }), svg('rect', { x: -11, y: -2, width: 22, height: 4, fill: '#d9b8ff' }), svg('rect', { x: -5, y: -5, width: 10, height: 10, fill: '#fff' })));
+    [[20, 56], [30, 58], [40, 56]].forEach(([x, y], i) => { const p = svg('rect', { x, y, width: 3, height: 3, fill: '#d9b8ff', class: 'rise' }); p.style.animationDelay = (i * .6) + 's'; s.append(p); });
+  } else if (id === 'peakadmin') {
+    const shield = ['ssssssssss', 'ssssssssss', 'ssssssssss', 'ssssssssss', '.ssssssss.', '.ssssssss.', '..ssssss..', '...ssss...', '....ss....'];
+    const g = svg('g', { class: 'layer' });
+    shield.forEach((row, y) => { const last = row.lastIndexOf('s'); [...row].forEach((ch, x) => { if (ch === '.') return; g.append(svg('rect', { x: 7 + x * 5, y: 8 + y * 5.5, width: 5.2, height: 5.7, fill: x === last ? '#3358c9' : x === 0 ? '#7fa0ff' : '#4f7cff' })); }); });
+    g.append(svg('polyline', { points: '20,30 28,38 44,20', fill: 'none', stroke: '#fff', 'stroke-width': 5, 'stroke-linecap': 'square', class: 'check' }));
+    s.append(g);
+  } else if (id === 'peakwarps') {
+    s.append(svg('rect', { x: 14, y: 6, width: 36, height: 52, fill: '#2a1747' }), svg('rect', { x: 14, y: 6, width: 36, height: 6, fill: '#3b2362' }));
+    [0, 1, 2, 3].forEach(i => [0, 1].forEach(j => { const r = svg('rect', { x: 20 + j * 12, y: 14 + i * 10, width: 12, height: 10, fill: (i + j) % 2 ? '#b57cff' : '#8a4bff', class: 'portal' }); r.style.animationDelay = ((i + j) * .22) + 's'; s.append(r); }));
+  } else if (id === 'peakregions') {
+    s.append(svg('rect', { x: 6, y: 6, width: 52, height: 52, fill: '#141a2e' }));
+    for (let i = 1; i < 5; i++) s.append(svg('rect', { x: 6 + i * 10.4, y: 6, width: 1, height: 52, fill: '#2d3a63' }), svg('rect', { x: 6, y: 6 + i * 10.4, width: 52, height: 1, fill: '#2d3a63' }));
+    s.append(svg('rect', { x: 16, y: 18, width: 34, height: 26, fill: 'rgba(111,224,176,.18)', stroke: '#6fe0b0', 'stroke-width': 2.5, 'stroke-dasharray': '6 4', class: 'ants' }));
+    [[16, 18], [50, 18], [16, 44], [50, 44]].forEach(([x, y]) => s.append(svg('rect', { x: x - 3, y: y - 3, width: 6, height: 6, fill: '#fff' })));
+  } else if (id === 'peakstats') {
+    [[10, 22, '#7aa2ff'], [24, 34, '#6fe0b0'], [38, 14, '#ffd86b'], [52, 28, '#b58cff']].forEach(([x, h, c], i) => { const r = svg('rect', { x: x - 5, y: 56 - h, width: 10, height: h, fill: c, class: 'bar' }); r.style.animationDelay = (i * .22) + 's'; s.append(r); });
+    s.append(svg('rect', { x: 4, y: 56, width: 56, height: 3, fill: '#6b7390' }));
+    s.append(svg('polyline', { points: '10,38 24,24 38,34 52,10', fill: 'none', stroke: '#fff', 'stroke-width': 2.5, class: 'trend' }));
+  } else if (id === 'players') {
+    const head = ['hhhhhhhh', 'hhhhhhhh', 'hffffffh', 'ffeffefp', 'ffffffff', 'ffffffff', 'fffmmfff', '.ffffff.'];
+    const col = { h: '#5a3a22', f: '#e0b48a', e: '#ffffff', p: '#3a5fd0', m: '#b5694a' };
+    const g = svg('g', { class: 'layer' });
+    head.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') g.append(svg('rect', { x: 8 + x * 6, y: 8 + y * 6, width: 6.2, height: 6.2, fill: ch === 'p' ? col.f : col[ch] })); }));
+    g.append(svg('rect', { x: 8 + 2 * 6, y: 8 + 3 * 6, width: 6, height: 6, fill: '#fff' }), svg('rect', { x: 8 + 3 * 6, y: 8 + 3 * 6, width: 6, height: 6, fill: '#3a5fd0' }), svg('rect', { x: 8 + 5 * 6, y: 8 + 3 * 6, width: 6, height: 6, fill: '#fff' }), svg('rect', { x: 8 + 6 * 6, y: 8 + 3 * 6, width: 6, height: 6, fill: '#3a5fd0' }));
+    s.append(g);
+  }
   else { s.append(svg('rect', { x: 12, y: 12, width: 40, height: 40, fill: '#7aa2ff', class: 'layer' })); }
   return s;
 }
