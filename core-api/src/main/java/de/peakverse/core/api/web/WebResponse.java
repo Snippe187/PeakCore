@@ -3,7 +3,18 @@ package de.peakverse.core.api.web;
 import java.nio.charset.StandardCharsets;
 
 /** Antwort eines Moduls an die Web-Oberflaeche. */
-public record WebResponse(int status, String contentType, byte[] body) {
+public record WebResponse(int status, String contentType, byte[] body, java.nio.file.Path file, String fileName) {
+    private static final byte[] NONE = new byte[0];
+
+    public WebResponse(int status, String contentType, byte[] body) {
+        this(status, contentType, body, null, null);
+    }
+
+    /** Grosse Datei als Download: wird beim Senden gestreamt (nicht im Speicher gehalten), Name fuer den Browser-Download. */
+    public static WebResponse download(java.nio.file.Path file, String fileName, String contentType) {
+        return new WebResponse(200, contentType, NONE, file, fileName);
+    }
+
     public static WebResponse json(String json) {
         return new WebResponse(200, "application/json; charset=utf-8", json.getBytes(StandardCharsets.UTF_8));
     }

@@ -582,6 +582,21 @@ public final class WebHost implements HttpHandler {
         h.set("X-Content-Type-Options", "nosniff");
         h.set("Referrer-Policy", "no-referrer");
         h.set("Cache-Control", h.getFirst("Cache-Control") == null ? "no-store" : h.getFirst("Cache-Control"));
+        if (r.file() != null) {
+            long size = java.nio.file.Files.size(r.file());
+            String safe = r.fileName() == null ? "download" : r.fileName().replaceAll("[^A-Za-z0-9._-]", "_");
+            h.set("Content-Disposition", "attachment; filename=\"" + safe + "\"");
+            if (ex.getRequestMethod().equals("HEAD")) {
+                h.set("Content-Length", Long.toString(size));
+                ex.sendResponseHeaders(r.status(), -1);
+                return;
+            }
+            ex.sendResponseHeaders(r.status(), size == 0 ? -1 : size);
+            try (InputStream in = java.nio.file.Files.newInputStream(r.file()); var out = ex.getResponseBody()) {
+                in.transferTo(out);
+            }
+            return;
+        }
         if (ex.getRequestMethod().equals("HEAD")) {
             h.set("Content-Length", Integer.toString(r.body().length));
             ex.sendResponseHeaders(r.status(), -1);

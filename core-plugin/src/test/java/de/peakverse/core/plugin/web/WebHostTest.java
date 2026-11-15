@@ -46,6 +46,9 @@ class WebHostTest {
         mod.route("echo", r -> WebResponse.text(r.method() + ":" + r.text() + ":" + r.admin()));
         mod.route("boom", r -> { throw new IllegalArgumentException("kaputt"); });
         mod.route("files/*", r -> WebResponse.text(r.path()));
+        Path big = dir.resolve("grosse datei.zip");
+        java.nio.file.Files.write(big, new byte[300_000]);
+        mod.route("dl", r -> WebResponse.download(big, "weird\"name.zip", "application/zip"));
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 8);
         server.createContext("/", host);
         server.setExecutor(java.util.concurrent.Executors.newFixedThreadPool(4));
@@ -113,6 +116,18 @@ class WebHostTest {
         assertEquals(404, call("GET", "/api/demo/nix", c, null).statusCode());
         assertEquals(404, call("GET", "/api/gibtsnicht/x", c, null).statusCode());
         assertEquals("files/a/b", call("GET", "/api/demo/files/a/b", c, null).body());
+    }
+
+    @Test
+    void downloadsAreStreamedWithASafeFileName() throws Exception {
+        assertEquals(401, call("GET", "/api/demo/dl", null, null).statusCode());
+        String c = login();
+        HttpRequest req = HttpRequest.newBuilder(URI.create(base + "/api/demo/dl")).header("Cookie", c).build();
+        HttpResponse<byte[]> r = http.send(req, HttpResponse.BodyHandlers.ofByteArray());
+        assertEquals(200, r.statusCode());
+        assertEquals(300_000, r.body().length);
+        assertEquals("attachment; filename=\"weird_name.zip\"", r.headers().firstValue("Content-Disposition").orElseThrow());
+        assertEquals("application/zip", r.headers().firstValue("Content-Type").orElseThrow());
     }
 
     @Test
