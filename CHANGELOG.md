@@ -1,5 +1,8 @@
 # Changelog
 
+## Unveroeffentlicht
+- Web: Dateien koennen als Download gestreamt werden (`WebResponse.download`). Startseite aktualisiert, Module nach Aufgabe gruppiert. Neue API `StatsLookup` fuer freigegebene Statistik-Werte.
+
 ## 0.1.8
 - **Rechte fremder Plugins**: Neuer Reiter Spieler > Plugins: Plugins wie AssassinTales waehlen, deren Rechte danach in Rollen und je Spieler gesetzt werden koennen (`permissions.manage-plugins` in der config.yml). Die Rechte der neuen Module (Achievements, Enchants, Admin, Warps) sind jetzt ebenfalls dabei.
 - **Neues Modul PeakAchievements** ist im Plugin enthalten (siehe dort).
