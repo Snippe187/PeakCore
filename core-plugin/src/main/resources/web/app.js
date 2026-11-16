@@ -4,12 +4,12 @@ const LANGS = [['de', 'Deutsch'], ['en', 'English'], ['fr', 'Français'], ['es',
 const STR = {
   de: { home: 'Start', server: 'Server', modules: 'Module', players: 'Spieler', errors: 'Fehler', log: 'Protokoll', logout: 'Abmelden', hello: 'Angemeldet als', welcome: 'Willkommen',
     th_day: 'Tag', th_night: 'Nacht', pickLang: 'Sprache wählen', ctaServer: 'Server verwalten', ctaModules: 'Module ansehen',
-    tag1: 'Texturen zeichnen, die jeder sofort sieht.', tag2: 'Sounds, Packs und Fähigkeiten an einem Ort.', tag3: 'Dein Server, deine Regeln, live aktualisiert.',
-    aboutT: 'Was ist PeakVerse?', aboutP: 'PeakVerse ist die Verwaltung für deinen Minecraft-Server. Du gestaltest Texturen, Sounds und das Server-Pack bequem im Browser. Spieler mit der Mod bekommen jede Änderung sofort, ohne neu beizutreten.',
+    tag1: 'Spieler, Welt und Server an einem Ort.', tag2: 'Texturen, Erfolge und Statistiken live.', tag3: 'Dein Server, deine Regeln, live aktualisiert.',
+    aboutT: 'Was ist PeakVerse?', aboutP: 'PeakVerse ist die Verwaltung für deinen Minecraft-Server. Du verwaltest Spieler, Sicherungen, Erfolge, Verzauberungen, Warps und Statistiken bequem im Browser und gestaltest Texturen und das Server-Pack. Spieler mit der Mod bekommen Änderungen sofort, ohne neu beizutreten.',
     f1T: 'Texturen', f1P: 'Zeichne Gegenstände im Pixel-Editor oder nimm ein Standard-Bild und mach es zu deinem.',
-    f2T: 'Pack-Verwaltung', f2P: 'Testmodus, Freigabe und Zurückrollen: das Server-Pack bleibt immer unter deiner Kontrolle.',
-    f3T: 'Live und sicher', f3P: 'Mehrere Admins gleichzeitig, Konflikt-Warnung und ein Protokoll über jede Änderung.',
-    howT: 'So funktioniert es', s1T: 'Anmelden', s1P: 'Im Spiel /peakcore web eingeben und den Link anklicken.', s2T: 'Gestalten', s2P: 'Texturen zeichnen, Dateien hochladen, Fähigkeiten einstellen.', s3T: 'Freigeben', s3P: 'Das Pack wird gebaut und kommt bei den Spielern sofort an.',
+    f2T: 'Spieler und Server', f2P: 'Inventare, Fortschritte, Item-Log, Sicherungen zum Herunterladen, Konsole und Neustart.',
+    f3T: 'Statistiken live', f3P: 'Spielzeit, Kämpfe und Bau-Werte mit Diagrammen, Bestenlisten und Live-Aktualisierung.',
+    howT: 'So funktioniert es', s1T: 'Anmelden', s1P: 'Im Spiel /peakcore web eingeben und den Link anklicken.', s2T: 'Verwalten', s2P: 'Ein Modul öffnen und Spieler, Erfolge, Warps oder Texturen bearbeiten.', s3T: 'Live', s3P: 'Änderungen kommen sofort bei den Spielern und anderen Admins an.',
     statModules: 'Module', statAdmins: 'Admins online', statLangs: 'Sprachen',
     srvT: 'Dein Server', srvSub: 'Status und Werkzeuge auf einen Blick.', srvPack: 'Pack-Server', running: 'läuft', stopped: 'aus', sending: 'Pack wird gesendet', testMode: 'Testmodus', problems: 'Hinweise',
     adminsOnline: 'Admins online', tools: 'Werkzeuge', recent: 'Zuletzt geändert', open: 'Öffnen',
@@ -23,12 +23,12 @@ const STR = {
     devT: 'Verbundene Geräte', devNone: 'Noch kein Gerät gekoppelt. Auf der Anmeldeseite deinen Minecraft-Namen eingeben, um ein Handy zu verbinden.', devThis: 'dieses Gerät', devLast: 'zuletzt', devBlock: 'Sperren', devBlockQ: 'Dieses Gerät sperren?', devHint: 'Gekoppelte Geräte bleiben angemeldet, bis du sie sperrst (oder der Spieler kein Operator mehr ist).' },
   en: { home: 'Home', server: 'Server', modules: 'Modules', players: 'Players', errors: 'Errors', log: 'Log', logout: 'Log out', hello: 'Signed in as', welcome: 'Welcome',
     th_day: 'Day', th_night: 'Night', pickLang: 'Choose your language', ctaServer: 'Manage server', ctaModules: 'Browse modules',
-    tag1: 'Draw textures everyone sees instantly.', tag2: 'Sounds, packs and abilities in one place.', tag3: 'Your server, your rules, updated live.',
-    aboutT: 'What is PeakVerse?', aboutP: 'PeakVerse is the control center for your Minecraft server. Design textures, sounds and the server pack right in your browser. Players with the mod get every change instantly, without rejoining.',
+    tag1: 'Players, world and server in one place.', tag2: 'Textures, achievements and stats live.', tag3: 'Your server, your rules, updated live.',
+    aboutT: 'What is PeakVerse?', aboutP: 'PeakVerse is the control center for your Minecraft server. Manage players, backups, achievements, enchantments, warps and stats in your browser, and design textures and the server pack. Players with the mod get changes instantly, without rejoining.',
     f1T: 'Textures', f1P: 'Draw items in the pixel editor or start from a default image and make it yours.',
-    f2T: 'Pack management', f2P: 'Test mode, release and rollback: the server pack always stays under your control.',
-    f3T: 'Live and safe', f3P: 'Several admins at once, conflict warnings and a log of every change.',
-    howT: 'How it works', s1T: 'Sign in', s1P: 'Type /peakcore web in the game and click the link.', s2T: 'Create', s2P: 'Draw textures, upload files, set abilities.', s3T: 'Release', s3P: 'The pack is built and reaches players right away.',
+    f2T: 'Players and server', f2P: 'Inventories, progress, item log, downloadable backups, console and restart.',
+    f3T: 'Live stats', f3P: 'Play time, combat and building values with charts, top lists and live updates.',
+    howT: 'How it works', s1T: 'Sign in', s1P: 'Type /peakcore web in the game and click the link.', s2T: 'Manage', s2P: 'Open a module and edit players, achievements, warps or textures.', s3T: 'Live', s3P: 'Changes reach players and other admins right away.',
     statModules: 'Modules', statAdmins: 'Admins online', statLangs: 'Languages',
     srvT: 'Your server', srvSub: 'Status and tools at a glance.', srvPack: 'Pack server', running: 'running', stopped: 'off', sending: 'Sending pack', testMode: 'Test mode', problems: 'Notices',
     adminsOnline: 'Admins online', tools: 'Tools', recent: 'Recent changes', open: 'Open',
@@ -368,7 +368,7 @@ function home(view) {
       h('div', { class: 'row' }, h('button', { class: 'px-btn primary big-btn', onclick: () => go('server') }, t('ctaServer')), h('button', { class: 'px-btn big-btn', onclick: () => go('modules') }, t('ctaModules'))),
       langs)),
     h('section', { class: 'about reveal' }, h('h2', {}, t('aboutT')), h('p', { class: 'lead' }, t('aboutP'))),
-    h('div', { class: 'feat' }, [['f1', 'texturepeak'], ['f2', 'pack'], ['f3', 'areas']].map(([k, logo]) => h('div', { class: 'fcard reveal' }, h('div', { class: 'ficon' }, logoFor(logo, 64)), h('h3', {}, t(k + 'T')), h('p', {}, t(k + 'P'))))),
+    h('div', { class: 'feat' }, [['f1', 'texturepeak'], ['f2', 'peakadmin'], ['f3', 'peakstats']].map(([k, logo]) => h('div', { class: 'fcard reveal' }, h('div', { class: 'ficon' }, logoFor(logo, 64)), h('h3', {}, t(k + 'T')), h('p', {}, t(k + 'P'))))),
     h('section', { class: 'how reveal' }, h('h2', {}, t('howT')),
       h('div', { class: 'steps' }, ['s1', 's2', 's3'].map((k, i) => h('div', { class: 'step reveal' }, h('div', { class: 'num' }, i + 1), h('h3', {}, t(k + 'T')), h('p', {}, t(k + 'P')))))),
     h('div', { class: 'stats reveal' }, [[S.modules.length, t('statModules')], [Math.max(1, S.session.online.length), t('statAdmins')], [LANGS.length, t('statLangs')]].map(([n, l]) => { const v = h('b', {}, '0'); queueMicrotask(() => countUp(v, n)); return h('div', { class: 'stat' }, v, h('span', {}, l)); })));
@@ -455,10 +455,27 @@ function modCard(m) {
   return h('div', { class: 'mcard reveal', onclick: () => go(m.id) },
     h('div', { class: 'mlogo' }, logoFor(m.id, 84)), h('div', { class: 'mtxt' }, h('h3', {}, modTitle(m)), h('p', {}, tr(DESC[m.id]) || ''), h('span', { class: 'px-btn small' }, t('open') + ' →')));
 }
+// Module nach Aufgabe gruppiert: Spieler & Welt, Inhalte, Sonstiges
+const MOD_GROUPS = [
+  { de: 'Spieler und Welt', en: 'Players and world', ids: ['peakadmin', 'peakstats', 'peakwarps', 'peakregions'] },
+  { de: 'Inhalte', en: 'Content', ids: ['peakachievements', 'peakenchants', 'texturepeak', 'peakboard'] }
+];
+function modGroups(mods) {
+  const used = new Set();
+  const out = [];
+  const section = (title, list) => { if (list.length) out.push(h('h2', { class: 'reveal' }, title), h('div', { class: 'mgrid' }, list.map(modCard))); };
+  for (const g of MOD_GROUPS) {
+    const list = g.ids.map(id => mods.find(m => m.id === id)).filter(Boolean);
+    list.forEach(m => used.add(m.id));
+    section(S.lang === 'de' ? g.de : g.en, list);
+  }
+  section(S.lang === 'de' ? 'Weitere' : 'More', mods.filter(m => !used.has(m.id)));
+  return h('div', {}, out);
+}
 function modulesPage(view) {
   const mods = S.modules.filter(m => !CORE_TOOLS.includes(m.id));
   view.append(h('section', { class: 'srv-head reveal' }, h('div', { class: 'grow' }, h('h1', {}, t('modT')), h('p', { class: 'sub' }, t('modSub')))),
-    mods.length ? h('div', { class: 'mgrid' }, mods.map(modCard)) : h('div', { class: 'empty' }, t('noModules')),
+    mods.length ? modGroups(mods) : h('div', { class: 'empty' }, t('noModules')),
     h('h2', { class: 'reveal' }, t('planned')),
     h('div', { class: 'mgrid' }, PLANNED.map(p => h('div', { class: 'mcard ghost reveal' }, h('div', { class: 'mlogo' }, logoGeneric('planned', 84)), h('div', { class: 'mtxt' }, h('h3', {}, p.name), h('p', {}, tr(p)), h('span', { class: 'chip' }, t('soon')))))));
 }
